@@ -1,0 +1,16 @@
+{
+  "name": "kovil-system",
+  "version": "1.0.0",
+  "description": "Kovil Management System - Temple Management Application",
+  "main": "index.php",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/input.css -o ./public/css/style.css --minify",
+    "watch:css": "tailwindcss -i ./src/input.css -o ./public/css/style.css --watch"
+  },
+  "keywords": ["kovil", "temple", "management"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
