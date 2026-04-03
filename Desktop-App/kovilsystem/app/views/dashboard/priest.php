@@ -165,6 +165,36 @@
             <p class="text-gray-600 max-w-md mx-auto">You haven't been assigned to any poojas yet. The admin will assign duties soon.</p>
         </div>
         <?php endif; ?>
+
+        <!-- Quick Links -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <a href="?url=priest-schedules" 
+               class="glass-card p-6 card-hover bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white block transform transition-all duration-200 hover:scale-105 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">📅 View All Schedules & Festivals</h3>
+                        <p class="text-indigo-100 text-sm">Browse upcoming poojas and temple events</p>
+                    </div>
+                    <svg class="w-12 h-12 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                </div>
+            </a>
+
+            <a href="?url=schedule" 
+               class="glass-card p-6 card-hover bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white block transform transition-all duration-200 hover:scale-105 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">🛕 Book Pooja (Devotee)</h3>
+                        <p class="text-emerald-100 text-sm">Book a pooja as a devotee</p>
+                    </div>
+                    <svg class="w-12 h-12 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                    </svg>
+                </div>
+            </a>
+        </div>
     </div>
 </div>
 

@@ -87,14 +87,14 @@ class Duty {
      */
     public function getPriestAvailability($date) {
         $stmt = $this->conn->prepare("
-            SELECT u.id, u.name, u.email, u.phone,
+            SELECT u.id, u.name, u.email, u.phone, u.approval_status,
                    COUNT(pd.id) as assigned_count
             FROM users u
             LEFT JOIN priest_duties pd ON u.id = pd.priest_id 
                 AND pd.assigned_date = ? 
                 AND pd.status != 'cancelled'
-            WHERE u.role = 'priest' AND u.approval_status = 'approved'
-            GROUP BY u.id, u.name, u.email, u.phone
+            WHERE u.role = 'priest'
+            GROUP BY u.id, u.name, u.email, u.phone, u.approval_status
             ORDER BY assigned_count ASC, u.name ASC
         ");
         $stmt->bind_param("s", $date);
@@ -214,5 +214,36 @@ class Duty {
             error_log("Remove duty error: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Get all pooja schedules with priest assignment info
+     */
+    public function getAllSchedulesWithAssignments() {
+        $result = $this->conn->query("
+            SELECT 
+                ps.*,
+                u.name as assigned_priest_name,
+                pd.status as assignment_status,
+                pd.id as assignment_id
+            FROM pooja_schedule ps
+            LEFT JOIN priest_duties pd ON ps.id = pd.schedule_id AND pd.status != 'cancelled'
+            LEFT JOIN users u ON pd.priest_id = u.id
+            WHERE ps.pooja_date >= CURDATE()
+            ORDER BY ps.pooja_date ASC, ps.time_slot ASC
+        ");
+        return $result;
+    }
+
+    /**
+     * Get all festivals
+     */
+    public function getAllFestivals() {
+        $result = $this->conn->query("
+            SELECT * FROM festivals 
+            WHERE date >= CURDATE()
+            ORDER BY date ASC
+        ");
+        return $result;
     }
 }

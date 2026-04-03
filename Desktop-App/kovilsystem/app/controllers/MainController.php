@@ -227,11 +227,14 @@ class MainController {
                     
                     $donations = $donationModel->getTotalAmount();
                     $bookings = $bookingModel->getTotalBookings();
+                } elseif ($userRole === 'priest') {
+                    // Priest dashboard - show assigned duties, schedules, and festivals
+                    $priestId = $_SESSION['user']['id'];
+                    $data = $dutyModel->getByPriest($priestId);
                 } elseif ($userRole === 'devotee') {
                     // Devotee dashboard - show recent bookings and upcoming poojas
                     $data = $bookingModel->getByUser($_SESSION['user']['id']);
                 }
-                // Priest dashboard shows duties (handled in priest view)
                 break;
 
             case 'pooja-history':
@@ -546,6 +549,16 @@ class MainController {
                 $data = $dutyModel->getByPriest($_SESSION['user']['id']);
                 break;
 
+            case 'priest-schedules':
+                // Priest can view all schedules and festivals
+                if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['priest', 'management'])) {
+                    header("Location: ?url=login");
+                    exit;
+                }
+                $schedules = $dutyModel->getAllSchedulesWithAssignments();
+                $festivals = $festivalModel->getAll();
+                break;
+
             case 'assign':
                 $this->checkRole('management');
 
@@ -596,7 +609,13 @@ class MainController {
                 
                 // Get priests with their availability
                 $priests = $dutyModel->getPriestAvailability($selectedDate);
-                $schedules = $scheduleModel->getAvailable();
+                
+                // Get all pooja schedules for priest assignment (including past dates for reference)
+                // Order by date descending to show most recent first
+                $schedules = $this->conn->query("
+                    SELECT * FROM pooja_schedule 
+                    ORDER BY pooja_date DESC, time_slot ASC
+                ");
                 break;
 
             case 'donation':

@@ -102,6 +102,20 @@
             <p class="text-sm text-gray-600"><?= trans('schedule_new_pooja') ?></p>
         </a>
 
+        <!-- Assign Priest Duties Card (Indigo/Purple) -->
+        <a href="?url=assign" class="group glass-card-light p-6 card-hover border-l-4 border-indigo-600">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </div>
+                <span class="text-3xl opacity-20 group-hover:opacity-40 transition-opacity">🙏</span>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-1">Assign Priest Duties</h3>
+            <p class="text-sm text-gray-600">Assign poojas to priests & send SMS</p>
+        </a>
+
         <!-- Reports Card (Dark Green) -->
         <a href="?url=report" class="group glass-card-light p-6 card-hover border-l-4 border-primary-800">
             <div class="flex items-center justify-between mb-4">

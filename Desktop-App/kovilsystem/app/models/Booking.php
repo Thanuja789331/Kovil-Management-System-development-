@@ -58,7 +58,7 @@ class Booking {
             // Generate unique booking reference
             $bookingRef = 'BKG' . strtoupper(uniqid());
             
-            $stmt = $this->conn->prepare("INSERT INTO bookings (booking_reference, schedule_id, user_id, phone, special_requests, status, created_at) VALUES (?, ?, ?, ?, ?, 'confirmed', NOW())");
+            $stmt = $this->conn->prepare("INSERT INTO bookings (booking_reference, schedule_id, user_id, devotee_phone, special_requests, status, created_at) VALUES (?, ?, ?, ?, ?, 'confirmed', NOW())");
             
             if (!$stmt) {
                 error_log("Prepare failed: " . $this->conn->error);
@@ -214,7 +214,7 @@ class Booking {
      */
     public function getById($id) {
         $stmt = $this->conn->prepare("
-            SELECT b.*, p.pooja_name, p.pooja_date, p.time_slot, u.name as user_name
+            SELECT b.*, p.pooja_name, p.pooja_date, p.time_slot, u.name as user_name, b.devotee_phone AS phone
             FROM bookings b
             JOIN pooja_schedule p ON b.schedule_id = p.id
             JOIN users u ON b.user_id = u.id
