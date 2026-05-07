@@ -52,11 +52,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     user_id INT NOT NULL,
     devotee_phone VARCHAR(20),
     special_requests TEXT,
-    notification_preference ENUM('sms', 'email', 'both') NOT NULL DEFAULT 'both',
     status ENUM('confirmed', 'cancelled') DEFAULT 'confirmed',
-    confirmation_email_sent TINYINT(1) DEFAULT 0,
-    reminder_10_day_email_sent TINYINT(1) DEFAULT 0,
-    reminder_3_day_email_sent TINYINT(1) DEFAULT 0,
     sms_sent TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (schedule_id) REFERENCES pooja_schedule(id) ON DELETE CASCADE,
@@ -175,11 +171,7 @@ INSERT INTO festivals (name, date, description) VALUES
 ('Ganesh Chaturthi', '2026-09-07', 'Celebration of Lord Ganesh\'s birth with elaborate decorations'),
 ('Navaratri', '2026-10-03', 'Nine nights of divine feminine worship with Durga Saptashati recitation'),
 ('Diwali', '2026-11-18', 'Festival of lights with special lakshmi pooja and celebrations'),
-('Tamil New Year', '2026-04-14', 'Traditional new year celebration with special poojas'),
-('Thai Pongal', '2026-01-14', 'Sri Lankan and Tamil harvest thanksgiving festival'),
-('Sinhala and Tamil New Year', '2026-04-14', 'Auspicious new year observance with temple blessings'),
-('Vinayagar Chathurthi', '2026-08-27', 'Special Ganapathi pooja and homam'),
-('Deepavali', '2026-10-20', 'Festival of lights with special Lakshmi pooja');
+('Tamil New Year', '2026-04-14', 'Traditional new year celebration with special poojas');
 
 -- Sample Announcements
 INSERT INTO announcements (title, message, date, created_by) VALUES
