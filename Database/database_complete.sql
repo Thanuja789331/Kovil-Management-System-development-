@@ -52,7 +52,11 @@ CREATE TABLE IF NOT EXISTS bookings (
     user_id INT NOT NULL,
     devotee_phone VARCHAR(20),
     special_requests TEXT,
+    notification_preference ENUM('sms', 'email', 'both') NOT NULL DEFAULT 'both',
     status ENUM('confirmed', 'cancelled') DEFAULT 'confirmed',
+    confirmation_email_sent TINYINT(1) DEFAULT 0,
+    reminder_10_day_email_sent TINYINT(1) DEFAULT 0,
+    reminder_3_day_email_sent TINYINT(1) DEFAULT 0,
     sms_sent TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (schedule_id) REFERENCES pooja_schedule(id) ON DELETE CASCADE,
@@ -113,6 +117,17 @@ CREATE TABLE IF NOT EXISTS festivals (
     INDEX idx_date (date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Special days table
+CREATE TABLE IF NOT EXISTS special_days (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(120) NOT NULL,
+    day_date DATE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_special_day_date (day_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Registration Logs table (audit trail)
 CREATE TABLE IF NOT EXISTS registration_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -171,7 +186,29 @@ INSERT INTO festivals (name, date, description) VALUES
 ('Ganesh Chaturthi', '2026-09-07', 'Celebration of Lord Ganesh\'s birth with elaborate decorations'),
 ('Navaratri', '2026-10-03', 'Nine nights of divine feminine worship with Durga Saptashati recitation'),
 ('Diwali', '2026-11-18', 'Festival of lights with special lakshmi pooja and celebrations'),
-('Tamil New Year', '2026-04-14', 'Traditional new year celebration with special poojas');
+('Tamil New Year', '2026-04-14', 'Traditional new year celebration with special poojas'),
+('Thai Pongal', '2026-01-14', 'Sri Lankan and Tamil harvest thanksgiving festival'),
+('Sinhala and Tamil New Year', '2026-04-14', 'Auspicious new year observance with temple blessings'),
+('Vinayagar Chathurthi', '2026-08-27', 'Special Ganapathi pooja and homam'),
+('Deepavali', '2026-10-20', 'Festival of lights with special Lakshmi pooja');
+
+-- Sample Special Days
+INSERT INTO special_days (title, day_date, description) VALUES
+('Ekadashi', '2026-03-24', 'Fasting and special Vishnu prayers'),
+('Pradosham', '2026-03-27', 'Special Shiva prayers during twilight'),
+('Pournami', '2026-04-12', 'Full moon special deeparadhanai'),
+('Aadi Amavasai', '2026-07-25', 'Ancestor remembrance and tharpanam'),
+('Varalakshmi Vratham', '2026-08-08', 'Special Lakshmi pooja for prosperity'),
+('Saraswathi Pooja', '2026-10-01', 'Pooja for knowledge, arts and learning'),
+('Vijayadashami', '2026-10-02', 'Auspicious day for new beginnings'),
+('Vesak Full Moon Day', '2026-05-12', 'Spiritual observance day with merit offerings'),
+('Poson Full Moon Day', '2026-06-11', 'Auspicious full moon observance and prayers'),
+('Esala Full Moon Day', '2026-07-10', 'Full moon observance with special temple programs'),
+('Nikini Full Moon Day', '2026-08-16', 'Auspicious full moon day observance'),
+('Binara Full Moon Day', '2026-09-14', 'Spiritual observance with special offerings'),
+('Vap Full Moon Day', '2026-10-13', 'Auspicious day for meditation and worship'),
+('Ill Full Moon Day', '2026-11-12', 'Full moon observance and devotional activities'),
+('Unduvap Full Moon Day', '2026-12-11', 'Year-end full moon observance');
 
 -- Sample Announcements
 INSERT INTO announcements (title, message, date, created_by) VALUES
