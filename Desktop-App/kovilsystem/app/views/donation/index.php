@@ -16,11 +16,24 @@
         <p class="text-gray-600">Contribute to the divine cause</p>
     </div>
 
+    <?php $isManagement = isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'management'; ?>
+    <?php
+    $donationsResult = null;
+    $receipt = null;
+    $summary = ['weekly_total' => 0, 'monthly_total' => 0, 'yearly_total' => 0, 'all_time_total' => 0];
+    if (is_array($data)) {
+        $donationsResult = $data['donations'] ?? null;
+        $receipt = $data['receipt'] ?? null;
+        $summary = $data['summary'] ?? $summary;
+    } else {
+        $donationsResult = $data;
+    }
+    ?>
     <!-- Top Blue Summary Card -->
     <div class="glass-card bg-gradient-to-r from-accent-500 to-accent-600 p-6 card-hover">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">Total Donations (Last Week)</p>
+                <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">Total Donations</p>
                 <p class="text-4xl font-bold text-white mt-2">$<?= number_format($donations ?? 0, 2) ?></p>
             </div>
             <div class="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
@@ -30,6 +43,15 @@
             </div>
         </div>
     </div>
+
+    <?php if ($isManagement): ?>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="glass-card p-4"><p class="text-sm text-gray-600">Weekly</p><p class="text-xl font-bold text-gray-800">$<?= number_format($summary['weekly_total'] ?? 0, 2) ?></p></div>
+        <div class="glass-card p-4"><p class="text-sm text-gray-600">Monthly</p><p class="text-xl font-bold text-gray-800">$<?= number_format($summary['monthly_total'] ?? 0, 2) ?></p></div>
+        <div class="glass-card p-4"><p class="text-sm text-gray-600">Yearly</p><p class="text-xl font-bold text-gray-800">$<?= number_format($summary['yearly_total'] ?? 0, 2) ?></p></div>
+        <div class="glass-card p-4"><p class="text-sm text-gray-600">All Time</p><p class="text-xl font-bold text-gray-800">$<?= number_format($summary['all_time_total'] ?? 0, 2) ?></p></div>
+    </div>
+    <?php endif; ?>
 
     <!-- Donation Form -->
     <div class="glass-card p-6 card-hover">
@@ -48,10 +70,12 @@
                     name="name" 
                     id="name"
                     placeholder="Enter your name"
+                    pattern="[A-Za-z ]{2,}"
                     class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl"
                     value="<?= htmlspecialchars($_SESSION['user']['name'] ?? '') ?>"
                     required
                 >
+                <p class="text-xs text-gray-500 mt-1">Letters and spaces only, minimum 2 letters</p>
             </div>
 
             <div>
@@ -80,6 +104,15 @@
             </div>
 
             <div class="md:col-span-2">
+                <label for="payment_method" class="block text-sm font-semibold text-gray-700 mb-2">Payment Method</label>
+                <select name="payment_method" id="payment_method" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 rounded-xl" required>
+                    <option value="card">Card Payment</option>
+                    <option value="online_transfer">Online Transfer</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-2">Bank transfer details: Kovil Temple Trust, A/C: 1234567890, Bank: Sampath Bank, Branch: Colombo Main, IFSC/SWIFT: BSAMLKLX.</p>
+            </div>
+
+            <div class="md:col-span-2">
                 <button 
                     type="submit" 
                     class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
@@ -90,14 +123,35 @@
         </form>
     </div>
 
+    <?php if (!empty($receipt)): ?>
+    <div class="glass-card p-6 border-l-4 border-green-500">
+        <h2 class="text-xl font-bold text-gray-800 mb-3">Donation Receipt</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
+            <p><strong>Reference:</strong> <?= htmlspecialchars($receipt['reference']) ?></p>
+            <p><strong>Name:</strong> <?= htmlspecialchars($receipt['name']) ?></p>
+            <p><strong>Amount:</strong> $<?= number_format((float)$receipt['amount'], 2) ?></p>
+            <p><strong>Method:</strong> <?= htmlspecialchars($receipt['payment_method'] === 'online_transfer' ? 'Online Transfer' : 'Card') ?></p>
+            <p><strong>Purpose:</strong> <?= htmlspecialchars($receipt['purpose'] ?: 'General') ?></p>
+            <p><strong>Date:</strong> <?= htmlspecialchars($receipt['created_at']) ?></p>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Recent Donations Table -->
     <div class="glass-card p-6 card-hover">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Donations</h2>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-800"><?= $isManagement ? 'Recent Donations' : 'Donation Summary' ?></h2>
+            <?php if($isManagement): ?>
+            <a href="?url=export-donations-pdf" class="bg-gradient-to-r from-primary-700 to-primary-800 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-all duration-200">
+                Download Donations Report (PDF)
+            </a>
+            <?php endif; ?>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b-2 border-gray-200">
-                        <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 uppercase">Name</th>
+                        <?php if($isManagement): ?><th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 uppercase">Name</th><?php endif; ?>
                         <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 uppercase">Amount</th>
                         <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 uppercase">Date</th>
                         <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 uppercase">Purpose</th>
@@ -107,16 +161,16 @@
                     <?php 
                     // Convert mysqli_result to array
                     $donations = [];
-                    if ($data instanceof mysqli_result) {
-                        $donations = $data->fetch_all(MYSQLI_ASSOC);
+                    if ($donationsResult instanceof mysqli_result) {
+                        $donations = $donationsResult->fetch_all(MYSQLI_ASSOC);
                     } elseif (is_array($data)) {
-                        $donations = $data;
+                        $donations = $data['donations'] ?? [];
                     }
                     ?>
                     <?php if(!empty($donations)): ?>
                         <?php foreach($donations as $donation): ?>
                         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td class="py-3 px-4 text-gray-800"><?= htmlspecialchars($donation['donor_name']) ?></td>
+                            <?php if($isManagement): ?><td class="py-3 px-4 text-gray-800"><?= htmlspecialchars($donation['donor_name']) ?></td><?php endif; ?>
                             <td class="py-3 px-4 text-green-600 font-semibold">$<?= number_format($donation['amount'], 2) ?></td>
                             <td class="py-3 px-4 text-gray-600">
                                 <?php if(isset($donation['created_at']) && !empty($donation['created_at'])): ?>
@@ -130,7 +184,7 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="4" class="py-8 text-center text-gray-500">No donations yet</td>
+                            <td colspan="<?= $isManagement ? '4' : '3' ?>" class="py-8 text-center text-gray-500">No donations yet</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
