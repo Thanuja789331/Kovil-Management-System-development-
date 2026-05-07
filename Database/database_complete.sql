@@ -233,6 +233,16 @@ INSERT INTO priest_duties (priest_id, schedule_id, assigned_date, status) VALUES
 -- VERIFICATION QUERIES
 -- ============================================
 
+-- Performance indexes for multi-user access
+ALTER TABLE pooja_schedule
+    ADD INDEX idx_schedule_status_date_slot (status, pooja_date, time_slot);
+ALTER TABLE bookings
+    ADD INDEX idx_bookings_user_status (user_id, status),
+    ADD INDEX idx_bookings_schedule_status (schedule_id, status);
+ALTER TABLE priest_duties
+    ADD INDEX idx_duties_priest_date_status (priest_id, assigned_date, status),
+    ADD INDEX idx_duties_priest_schedule (priest_id, schedule_id);
+
 -- Show all tables
 SELECT 'Tables created successfully!' as status;
 SHOW TABLES;
