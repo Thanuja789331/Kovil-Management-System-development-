@@ -63,13 +63,13 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                        <input type="tel" name="phone" placeholder="Enter your phone number" pattern="[0-9]{10}" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-secondary-500 focus:bg-white transition-all duration-200 rounded-xl" required>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                        <input type="email" name="email" placeholder="your@email.com" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-secondary-500 focus:bg-white transition-all duration-200 rounded-xl" required>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                        <input type="email" name="email" placeholder="your@email.com" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-secondary-500 focus:bg-white transition-all duration-200 rounded-xl" required>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                        <input type="tel" name="phone" placeholder="9876543210" pattern="[0-9]{10}" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-secondary-500 focus:bg-white transition-all duration-200 rounded-xl" required>
                     </div>
                     
                     <div>
@@ -105,13 +105,13 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                        <input type="tel" name="phone" placeholder="Enter phone number" pattern="[0-9]{10}" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-accent-500 focus:bg-white transition-all duration-200 rounded-xl" required>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                        <input type="email" name="email" placeholder="priest@email.com" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-accent-500 focus:bg-white transition-all duration-200 rounded-xl" required>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                        <input type="email" name="email" placeholder="priest@email.com" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-accent-500 focus:bg-white transition-all duration-200 rounded-xl" required>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                        <input type="tel" name="phone" placeholder="9876543210" pattern="[0-9]{10}" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-accent-500 focus:bg-white transition-all duration-200 rounded-xl" required>
                     </div>
                     
                     <div>
@@ -148,13 +148,13 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                        <input type="tel" name="phone" placeholder="Enter phone number" pattern="[0-9]{10}" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl" required>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                        <input type="email" name="email" placeholder="admin@email.com" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl" required>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                        <input type="email" name="email" placeholder="admin@email.com" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl" required>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                        <input type="tel" name="phone" placeholder="9876543210" pattern="[0-9]{10}" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl" required>
                     </div>
                     
                     <div>
@@ -213,15 +213,29 @@ function showRegister(role) {
     }
 }
 
+function initializePasswordToggles() {
+    document.querySelectorAll('.register-form input[type="password"]').forEach((input, idx) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative';
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+
+        input.classList.add('pr-16');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-900 font-semibold';
+        btn.textContent = 'Show';
+        btn.setAttribute('aria-label', 'Toggle password visibility ' + idx);
+        btn.addEventListener('click', () => {
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            btn.textContent = isHidden ? 'Hide' : 'Show';
+        });
+        wrapper.appendChild(btn);
+    });
+}
+
 // Initialize with devotee registration
 showRegister('devotee');
-
-// Check URL hash on page load to select correct tab
-window.addEventListener('DOMContentLoaded', function() {
-    const hash = window.location.hash.replace('#', '');
-    if (hash && ['devotee', 'priest', 'management'].includes(hash)) {
-        showRegister(hash);
-    }
-});
-
+initializePasswordToggles();
 </script>
