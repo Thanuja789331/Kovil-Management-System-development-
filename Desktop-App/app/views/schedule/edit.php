@@ -164,10 +164,10 @@ $currentBookedUserId = intval($schedule['booking_user_id'] ?? 0);
             </div>
 
             <!-- Submit Buttons -->
-            <div class="flex items-center space-x-4 pt-4">
+            <div class="flex flex-col sm:flex-row gap-4 pt-4">
                 <button 
                     type="submit" 
-                    class="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 active:scale-95"
+                    class="w-full sm:flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                     <span class="flex items-center justify-center space-x-2">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +178,7 @@ $currentBookedUserId = intval($schedule['booking_user_id'] ?? 0);
                 </button>
                 <a 
                     href="?url=schedule" 
-                    class="px-8 py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all"
+                    class="w-full sm:w-auto text-center px-8 py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all"
                 >
                     Cancel
                 </a>

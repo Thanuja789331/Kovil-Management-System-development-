@@ -16,32 +16,152 @@
         <p class="text-gray-600">View all upcoming pooja ceremonies</p>
     </div>
 
-    <!-- Date Filter -->
+    <!-- Request Pooja Button -->
+    <?php if(isset($_SESSION['user']) && $_SESSION['user']['role'] === 'devotee'): ?>
     <div class="glass-card p-4 mb-6">
-        <form method="GET" class="flex flex-col md:flex-row md:items-end gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-gray-800">Don't see your preferred date?</h3>
+                <p class="text-sm text-gray-600">Request a pooja on your preferred date</p>
+            </div>
+            <button onclick="openRequestModal()" class="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                <span>Request Pooja</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Request Pooja Modal -->
+    <div id="requestModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Request Pooja</h2>
+                <button onclick="closeRequestModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form action="?url=pooja-request&action=store" method="POST" class="space-y-4">
+                <div>
+                    <label for="pooja_name" class="block text-sm font-semibold text-gray-700 mb-2">Pooja Name *</label>
+                    <input type="text" id="pooja_name" name="pooja_name" required placeholder="e.g., Satyanarayana Pooja" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all outline-none">
+                </div>
+
+                <div>
+                    <label for="preferred_date" class="block text-sm font-semibold text-gray-700 mb-2">Preferred Date *</label>
+                    <input type="date" id="preferred_date" name="preferred_date" required min="<?= date('Y-m-d') ?>" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all outline-none">
+                </div>
+
+                <div>
+                    <label for="preferred_time_slot" class="block text-sm font-semibold text-gray-700 mb-2">Preferred Time Slot</label>
+                    <select id="preferred_time_slot" name="preferred_time_slot" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all outline-none bg-white">
+                        <option value="">Select time slot (optional)</option>
+                        <option value="06:00:00">Morning 6:00 AM</option>
+                        <option value="07:00:00">Morning 7:00 AM</option>
+                        <option value="08:00:00">Morning 8:00 AM</option>
+                        <option value="09:00:00">Morning 9:00 AM</option>
+                        <option value="10:00:00">Morning 10:00 AM</option>
+                        <option value="11:00:00">Morning 11:00 AM</option>
+                        <option value="16:00:00">Evening 4:00 PM</option>
+                        <option value="17:00:00">Evening 5:00 PM</option>
+                        <option value="18:00:00">Evening 6:00 PM</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="special_requests" class="block text-sm font-semibold text-gray-700 mb-2">Special Requests</label>
+                    <textarea id="special_requests" name="special_requests" rows="3" placeholder="Any special requirements or notes" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all outline-none resize-none"></textarea>
+                </div>
+
+                <div class="flex items-center space-x-4 pt-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 active:scale-95">
+                        Submit Request
+                    </button>
+                    <button type="button" onclick="closeRequestModal()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openRequestModal() {
+        document.getElementById('requestModal').classList.remove('hidden');
+        document.getElementById('requestModal').classList.add('flex');
+    }
+
+    function closeRequestModal() {
+        document.getElementById('requestModal').classList.add('hidden');
+        document.getElementById('requestModal').classList.remove('flex');
+    }
+    </script>
+    <?php endif; ?>
+
+    <!-- Filter Panel -->
+    <div class="glass-card p-6 mb-6 bg-white/90 shadow-xl border border-white/20 rounded-2xl">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <input type="hidden" name="url" value="schedule">
-            <div class="flex-1">
-                <label for="filter_date" class="block text-sm font-semibold text-gray-700 mb-2">Select Date</label>
+            
+            <div>
+                <label for="filter_date" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Select Ceremony Date</label>
                 <input
                     type="date"
                     name="filter_date"
                     id="filter_date"
                     value="<?= htmlspecialchars($_GET['filter_date'] ?? '') ?>"
-                    class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl bg-white/80 text-gray-800 focus:border-secondary-500 focus:outline-none"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-xl bg-white text-gray-800 focus:border-secondary-500 focus:outline-none transition-all duration-200"
                 >
             </div>
-            <button
-                type="submit"
-                class="bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-400 hover:to-secondary-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 shadow-lg"
-            >
-                Filter
-            </button>
-            <a
-                href="?url=schedule"
-                class="px-5 py-2.5 rounded-xl font-semibold text-gray-700 border-2 border-gray-300 hover:bg-gray-50 text-center"
-            >
-                Clear
-            </a>
+
+            <div>
+                <label for="pooja_type" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Filter by Pooja Type</label>
+                <select 
+                    name="pooja_type" 
+                    id="pooja_type" 
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-xl bg-white text-gray-800 focus:border-secondary-500 focus:outline-none transition-all duration-200"
+                >
+                    <?php 
+                    $selectedType = $_GET['pooja_type'] ?? '';
+                    $poojaTypes = [
+                        '' => 'All Pooja Types',
+                        'Abhishekam' => 'Abhishekam',
+                        'Archana' => 'Archana',
+                        'Homam' => 'Homam / Havan',
+                        'Pradosham' => 'Pradosham Puja',
+                        'Satyanarayana' => 'Satyanarayana Puja',
+                        'Sahasranama' => 'Sahasranama Archana',
+                        'Kalyana' => 'Kalyana Utsavam',
+                        'Special' => 'Special Festival Puja'
+                    ];
+                    foreach ($poojaTypes as $value => $label) {
+                        $selected = ($selectedType === $value) ? 'selected' : '';
+                        echo "<option value='" . htmlspecialchars($value) . "' $selected>" . htmlspecialchars($label) . "</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+
+            <div class="flex space-x-2">
+                <button
+                    type="submit"
+                    class="flex-1 bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-400 hover:to-secondary-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-all duration-200"
+                >
+                    Apply Filters
+                </button>
+                <?php if (!empty($_GET['filter_date']) || !empty($_GET['pooja_type'])): ?>
+                    <a
+                        href="?url=schedule"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl transition-all duration-200 text-center flex items-center justify-center border border-gray-200"
+                    >
+                        Clear
+                    </a>
+                <?php endif; ?>
+            </div>
         </form>
     </div>
 
@@ -62,7 +182,7 @@
                 $hasBookingInfo = isset($schedule['booked_by_name']);
             ?>
             <div class="glass-card p-6 card-hover <?= $isBooked ? 'opacity-75 bg-gray-50' : '' ?>">
-                <div class="flex items-start justify-between">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div class="flex items-start space-x-4 flex-1">
                         <!-- Icon Container -->
                         <div class="w-14 h-14 bg-gradient-to-br from-secondary-400 to-secondary-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -139,19 +259,19 @@
                     </div>
                     
                     <!-- Action Button -->
-                    <div class="ml-4 flex items-center space-x-2">
+                    <div class="ml-0 md:ml-4 flex flex-row items-center gap-2 self-start md:self-center w-full md:w-auto justify-start md:justify-end flex-wrap">
                         <?php if($isBooked): ?>
-                        <button disabled class="bg-gray-300 text-gray-500 px-5 py-2.5 rounded-xl font-semibold cursor-not-allowed inline-block">
+                        <button disabled class="bg-gray-300 text-gray-500 px-5 py-2.5 rounded-xl font-semibold cursor-not-allowed inline-block w-full sm:w-auto text-center">
                             🔒 Unavailable
                         </button>
                         <?php else: ?>
-                        <a href="?url=book&id=<?= $schedule['id'] ?>" class="bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-400 hover:to-secondary-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg inline-block">
+                        <a href="?url=book&id=<?= $schedule['id'] ?>" class="bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-400 hover:to-secondary-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg inline-block w-full sm:w-auto text-center">
                             Book Now
                         </a>
                         <?php endif; ?>
                         
                         <?php if(isset($_SESSION['user']) && $_SESSION['user']['role'] === 'management'): ?>
-                        <a href="?url=schedule&action=edit&id=<?= $schedule['id'] ?>" class="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-white px-4 py-2.5 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg inline-block">
+                        <a href="?url=schedule&action=edit&id=<?= $schedule['id'] ?>" class="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-white px-4 py-2.5 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg inline-block w-full sm:w-auto text-center">
                             Edit
                         </a>
                         <?php endif; ?>

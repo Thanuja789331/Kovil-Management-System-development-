@@ -88,6 +88,38 @@
             <p class="text-sm text-gray-600"><?= trans('send_updates_users') ?></p>
         </a>
 
+        <!-- Pooja Requests Card (Orange) -->
+        <?php
+        $pendingDashboardCount = 0;
+        try {
+            $dbConn = Database::connect();
+            $countRes = $dbConn->query("SELECT COUNT(*) as count FROM pooja_requests WHERE status = 'pending'");
+            if ($countRes) {
+                $countRow = $countRes->fetch_assoc();
+                $pendingDashboardCount = intval($countRow['count']);
+            }
+        } catch (Exception $e) {
+            error_log("Error getting pending requests count for admin dashboard: " . $e->getMessage());
+        }
+        ?>
+        <a href="?url=pooja-request&action=manage" class="group glass-card-light p-6 card-hover border-l-4 border-orange-500 relative overflow-hidden">
+            <?php if ($pendingDashboardCount > 0): ?>
+                <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-bl-xl shadow-md shadow-red-500/20 animate-pulse border-b border-l border-white/10">
+                    <?= $pendingDashboardCount ?> <?= trans('pending') ?>
+                </div>
+            <?php endif; ?>
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path>
+                    </svg>
+                </div>
+                <span class="text-3xl opacity-20 group-hover:opacity-40 transition-opacity">📝</span>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-1"><?= trans('pooja_requests') ?></h3>
+            <p class="text-sm text-gray-600">Manage devotee pooja requests</p>
+        </a>
+
         <!-- Add Pooja Card (Teal) -->
         <a href="?url=schedule&action=add" class="group glass-card-light p-6 card-hover border-l-4 border-teal-600">
             <div class="flex items-center justify-between mb-4">
@@ -117,7 +149,7 @@
         </a>
 
         <!-- Reports Card (Dark Green) -->
-        <a href="?url=report" class="group glass-card-light p-6 card-hover border-l-4 border-primary-800">
+        <a href="?url=report" class="group glass-card-light p-6 card-hover border-l-4 border-primary-800 lg:col-span-3">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-14 h-14 bg-gradient-to-br from-primary-700 to-primary-900 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                     <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,7 +191,8 @@
             </div>
             <div class="space-y-3">
                 <?php
-                $stmt = $this->conn->prepare("SELECT * FROM pooja_schedule WHERE status = 'available' ORDER BY pooja_date LIMIT 3");
+                $conn = Database::connect();
+                $stmt = $conn->prepare("SELECT * FROM pooja_schedule WHERE status = 'available' ORDER BY pooja_date LIMIT 3");
                 $stmt->execute();
                 $result = $stmt->get_result();
                 while ($row = $result->fetch_assoc()):

@@ -27,7 +27,7 @@
         
         <!-- Date Filter -->
         <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-            <form method="GET" class="flex items-center space-x-4">
+            <form method="GET" class="flex flex-col sm:flex-row sm:items-center gap-4">
                 <input type="hidden" name="url" value="assign">
                 <label class="text-gray-800 font-semibold whitespace-nowrap">Check availability for date:</label>
                 <input 
@@ -35,7 +35,7 @@
                     name="date" 
                     value="<?= htmlspecialchars($selectedDate) ?>"
                     min="<?= date('Y-m-d') ?>"
-                    class="px-4 py-2 bg-white border-2 border-gray-300 text-gray-900 rounded-lg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
+                    class="px-4 py-2 bg-white border-2 border-gray-300 text-gray-900 rounded-lg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all w-full sm:w-auto"
                     onchange="this.form.submit()"
                 >
             </form>

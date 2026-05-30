@@ -167,12 +167,12 @@
         <?php endif; ?>
 
         <!-- Quick Links -->
-        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <a href="?url=priest-schedules" 
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+            <a href="?url=priest-schedules"
                class="glass-card p-6 card-hover bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white block transform transition-all duration-200 hover:scale-105 shadow-xl">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-xl font-bold mb-2">📅 View All Schedules & Festivals</h3>
+                        <h3 class="text-xl font-bold mb-2">📅 Schedules & Festivals</h3>
                         <p class="text-indigo-100 text-sm">Browse upcoming poojas and temple events</p>
                     </div>
                     <svg class="w-12 h-12 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,11 +182,11 @@
                 </div>
             </a>
 
-            <a href="?url=schedule" 
+            <a href="?url=schedule"
                class="glass-card p-6 card-hover bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white block transform transition-all duration-200 hover:scale-105 shadow-xl">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-xl font-bold mb-2">🛕 Book Pooja (Devotee)</h3>
+                        <h3 class="text-xl font-bold mb-2">🛕 Book Pooja</h3>
                         <p class="text-emerald-100 text-sm">Book a pooja as a devotee</p>
                     </div>
                     <svg class="w-12 h-12 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,15 +195,28 @@
                 </div>
             </a>
 
-            <a href="?url=donation" 
+            <a href="?url=donation"
                class="glass-card p-6 card-hover bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-500 text-white block transform transition-all duration-200 hover:scale-105 shadow-xl">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-xl font-bold mb-2">💳 Donate to Temple</h3>
+                        <h3 class="text-xl font-bold mb-2">💳 Donate</h3>
                         <p class="text-violet-100 text-sm">Contribute by card or online transfer</p>
                     </div>
                     <svg class="w-12 h-12 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2z"></path>
+                    </svg>
+                </div>
+            </a>
+
+            <a href="?url=announcement"
+               class="glass-card p-6 card-hover bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 text-white block transform transition-all duration-200 hover:scale-105 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">🔔 Announcements</h3>
+                        <p class="text-orange-100 text-sm">View latest temple updates</p>
+                    </div>
+                    <svg class="w-12 h-12 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path>
                     </svg>
                 </div>
             </a>

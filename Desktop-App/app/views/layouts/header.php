@@ -15,32 +15,50 @@
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Left Side: Logo & Title -->
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-xl flex items-center justify-center shadow-lg">
+                <a href="?url=home" class="flex items-center space-x-3 group transition-transform duration-200 active:scale-95">
+                    <div class="w-10 h-10 bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform duration-300">
                         <span class="text-2xl">🛕</span>
                     </div>
-                    <h1 class="text-xl font-bold text-white tracking-wide"><?= APP_NAME ?></h1>
-                </div>
+                    <h1 class="text-xl font-bold text-white tracking-wide group-hover:text-secondary-400 transition-colors duration-200"><?= APP_NAME ?></h1>
+                </a>
                 
                 <?php if(isset($_SESSION['user'])): ?>
                 <!-- Right Side: User Info, Language Switcher & Logout -->
                 <div class="flex items-center space-x-4">
                     <!-- Admin Menu Dropdown -->
-                    <?php if($_SESSION['user']['role'] === 'management'): ?>
+                    <?php 
+                    if($_SESSION['user']['role'] === 'management'): 
+                        $pendingRequestsCount = 0;
+                        try {
+                            $dbConn = Database::connect();
+                            $countRes = $dbConn->query("SELECT COUNT(*) as count FROM pooja_requests WHERE status = 'pending'");
+                            if ($countRes) {
+                                $countRow = $countRes->fetch_assoc();
+                                $pendingRequestsCount = intval($countRow['count']);
+                            }
+                        } catch (Exception $e) {
+                            error_log("Error getting pending requests count for header: " . $e->getMessage());
+                        }
+                    ?>
                     <div class="relative group">
-                        <button class="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                        <button class="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl border border-white/20 hover:bg-white/20 transition-all focus:outline-none relative">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
                             <span class="hidden sm:inline text-white font-semibold text-sm"><?= trans('admin') ?></span>
+                            <?php if ($pendingRequestsCount > 0): ?>
+                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black shadow-md shadow-red-500/30 animate-pulse border border-white/20 ml-1">
+                                    <?= $pendingRequestsCount ?>
+                                </span>
+                            <?php endif; ?>
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
                         
                         <!-- Admin Dropdown Menu -->
-                        <div class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
+                        <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
                             <div class="py-2">
                                 <a href="?url=manage-users" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
                                     <div class="flex items-center space-x-2">
@@ -66,7 +84,30 @@
                                         <span class="font-medium text-sm">Approve Registration</span>
                                     </div>
                                 </a>
+                                <a href="?url=pooja-request&action=manage" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-2">
+                                            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path>
+                                            </svg>
+                                            <span class="font-medium text-sm"><?= trans('pooja_requests') ?></span>
+                                        </div>
+                                        <?php if ($pendingRequestsCount > 0): ?>
+                                            <span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow shadow-red-500/20 animate-pulse">
+                                                <?= $pendingRequestsCount ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </a>
                                 <div class="border-t border-gray-200 my-1"></div>
+                                <a href="?url=booking-search" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                                    <div class="flex items-center space-x-2">
+                                        <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                        </svg>
+                                        <span class="font-medium text-sm">Search Bookings</span>
+                                    </div>
+                                </a>
                                 <a href="?url=assign" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
                                     <div class="flex items-center space-x-2">
                                         <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,6 +122,67 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-8 0h6"></path>
                                         </svg>
                                         <span class="font-medium text-sm"><?= trans('dashboard') ?></span>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <!-- Devotee Menu Dropdown -->
+                    <?php if($_SESSION['user']['role'] === 'devotee'): ?>
+                    <div class="relative group">
+                        <button class="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl border border-white/20 hover:bg-white/20 transition-all focus:outline-none">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                            <span class="hidden sm:inline text-white font-semibold text-sm"><?= trans('menu') ?? 'Devotee Menu' ?></span>
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <!-- Devotee Dropdown Menu -->
+                        <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
+                            <div class="py-2">
+                                <a href="?url=dashboard" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                                    <div class="flex items-center space-x-2">
+                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-8 0h6"></path>
+                                        </svg>
+                                        <span class="font-medium text-sm"><?= trans('dashboard') ?></span>
+                                    </div>
+                                </a>
+                                <a href="?url=schedule" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                                    <div class="flex items-center space-x-2">
+                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <span class="font-medium text-sm"><?= trans('pooja_schedule') ?? 'Pooja Schedule' ?></span>
+                                    </div>
+                                </a>
+                                <a href="?url=my-bookings" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                                    <div class="flex items-center space-x-2">
+                                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                        </svg>
+                                        <span class="font-medium text-sm"><?= trans('my_bookings') ?></span>
+                                    </div>
+                                </a>
+                                <a href="?url=pooja-request&action=my-requests" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                                    <div class="flex items-center space-x-2">
+                                        <svg class="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                        </svg>
+                                        <span class="font-medium text-sm"><?= trans('my_custom_requests') ?? 'Custom Pooja Requests' ?></span>
+                                    </div>
+                                </a>
+                                <a href="?url=donation" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                                    <div class="flex items-center space-x-2">
+                                        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span class="font-medium text-sm"><?= trans('donation') ?? 'Donation' ?></span>
                                     </div>
                                 </a>
                             </div>

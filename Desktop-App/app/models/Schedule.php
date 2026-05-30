@@ -196,9 +196,207 @@ class Schedule {
     /**
      * Get all poojas with booking information and pagination
      */
-    public function getAllWithBookingsPaginated($perPage, $offset) {
-        $result = $this->conn->query("
+    public function getAllWithBookingsPaginated($perPage, $offset, $search = '', $status = '', $dateFilter = '') {
+        return $this->getAllWithBookingsPaginatedFiltered($perPage, $offset, $search, $status, $dateFilter);
+    }
+
+    public function getAllWithBookingsPaginatedFiltered($perPage, $offset, $search = '', $status = '', $dateFilter = '') {
+        $sql = "
             SELECT 
+                ps.id,
+                ps.pooja_name,
+                ps.pooja_date,
+                ps.time_slot,
+                ps.description,
+                ps.status,
+                ps.created_at,
+                u.name as booked_by_name,
+                b.devotee_phone as booked_by_phone
+            FROM pooja_schedule ps
+            LEFT JOIN bookings b ON ps.id = b.schedule_id AND b.status = 'confirmed'
+            LEFT JOIN users u ON b.user_id = u.id
+            WHERE 1=1
+        ";
+        
+        $params = [];
+        $types = "";
+        
+        if (!empty($search)) {
+            $sql .= " AND (ps.pooja_name LIKE ? OR u.name LIKE ? OR b.devotee_phone LIKE ? OR u.phone LIKE ?)";
+            $searchTerm = "%" . $search . "%";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $types .= "ssss";
+        }
+        
+        if (!empty($status)) {
+            $sql .= " AND ps.status = ?";
+            $params[] = $status;
+            $types .= "s";
+        }
+        
+        if (!empty($dateFilter)) {
+            if ($dateFilter === 'past') {
+                $sql .= " AND ps.pooja_date < CURDATE()";
+            } elseif ($dateFilter === 'today') {
+                $sql .= " AND ps.pooja_date = CURDATE()";
+            } elseif ($dateFilter === 'future') {
+                $sql .= " AND ps.pooja_date > CURDATE()";
+            }
+        }
+        
+        $sql .= " ORDER BY ps.pooja_date DESC, ps.time_slot ASC LIMIT ? OFFSET ?";
+        $params[] = (int) $perPage;
+        $params[] = (int) $offset;
+        $types .= "ii";
+        
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+        
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $stmt->close();
+        return $result;
+    }
+
+    /**
+     * Get total count of poojas
+     */
+    public function getTotalCount($search = '', $status = '', $dateFilter = '') {
+        return $this->getTotalCountFiltered($search, $status, $dateFilter);
+    }
+
+    public function getTotalCountFiltered($search = '', $status = '', $dateFilter = '') {
+        $sql = "
+            SELECT COUNT(*) as total
+            FROM pooja_schedule ps
+            LEFT JOIN bookings b ON ps.id = b.schedule_id AND b.status = 'confirmed'
+            LEFT JOIN users u ON b.user_id = u.id
+            WHERE 1=1
+        ";
+        
+        $params = [];
+        $types = "";
+        
+        if (!empty($search)) {
+            $sql .= " AND (ps.pooja_name LIKE ? OR u.name LIKE ? OR b.devotee_phone LIKE ? OR u.phone LIKE ?)";
+            $searchTerm = "%" . $search . "%";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $types .= "ssss";
+        }
+        
+        if (!empty($status)) {
+            $sql .= " AND ps.status = ?";
+            $params[] = $status;
+            $types .= "s";
+        }
+        
+        if (!empty($dateFilter)) {
+            if ($dateFilter === 'past') {
+                $sql .= " AND ps.pooja_date < CURDATE()";
+            } elseif ($dateFilter === 'today') {
+                $sql .= " AND ps.pooja_date = CURDATE()";
+            } elseif ($dateFilter === 'future') {
+                $sql .= " AND ps.pooja_date > CURDATE()";
+            }
+        }
+        
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return 0;
+        }
+        
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row['total'] ?? 0;
+    }
+
+    /**
+     * Get statistics on poojas
+     */
+    public function getPoojaStats($search = '', $status = '', $dateFilter = '') {
+        $sql = "
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN ps.status = 'available' THEN 1 ELSE 0 END) as available,
+                SUM(CASE WHEN ps.status = 'booked' THEN 1 ELSE 0 END) as booked,
+                SUM(CASE WHEN ps.status = 'completed' THEN 1 ELSE 0 END) as completed
+            FROM pooja_schedule ps
+            LEFT JOIN bookings b ON ps.id = b.schedule_id AND b.status = 'confirmed'
+            LEFT JOIN users u ON b.user_id = u.id
+            WHERE 1=1
+        ";
+        
+        $params = [];
+        $types = "";
+        
+        if (!empty($search)) {
+            $sql .= " AND (ps.pooja_name LIKE ? OR u.name LIKE ? OR b.devotee_phone LIKE ? OR u.phone LIKE ?)";
+            $searchTerm = "%" . $search . "%";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $types .= "ssss";
+        }
+        
+        if (!empty($status)) {
+            $sql .= " AND ps.status = ?";
+            $params[] = $status;
+            $types .= "s";
+        }
+        
+        if (!empty($dateFilter)) {
+            if ($dateFilter === 'past') {
+                $sql .= " AND ps.pooja_date < CURDATE()";
+            } elseif ($dateFilter === 'today') {
+                $sql .= " AND ps.pooja_date = CURDATE()";
+            } elseif ($dateFilter === 'future') {
+                $sql .= " AND ps.pooja_date > CURDATE()";
+            }
+        }
+        
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return ['total' => 0, 'available' => 0, 'booked' => 0, 'completed' => 0];
+        }
+        
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stmt->close();
+        
+        return [
+            'total' => $row['total'] ?? 0,
+            'available' => $row['available'] ?? 0,
+            'booked' => $row['booked'] ?? 0,
+            'completed' => $row['completed'] ?? 0
+        ];
+    }
+
+    /**
+     * Get all pooja schedules with optional filters
+     */
+    public function getAllWithBookingsFiltered($date = null, $poojaType = null, $fromDate = null) {
+        $sql = "
+            SELECT
                 ps.id,
                 ps.pooja_name,
                 ps.pooja_date,
@@ -208,21 +406,49 @@ class Schedule {
                 ps.created_at,
                 u.name as booked_by_name
             FROM pooja_schedule ps
-            LEFT JOIN bookings b ON ps.id = b.schedule_id
+            LEFT JOIN bookings b ON ps.id = b.schedule_id AND b.status = 'confirmed'
             LEFT JOIN users u ON b.user_id = u.id
-            ORDER BY ps.pooja_date DESC, ps.time_slot ASC
-            LIMIT $perPage OFFSET $offset
-        ");
-        return $result;
-    }
+            WHERE 1=1
+        ";
 
-    /**
-     * Get total count of poojas
-     */
-    public function getTotalCount() {
-        $result = $this->conn->query("SELECT COUNT(*) as total FROM pooja_schedule");
-        $row = $result->fetch_assoc();
-        return $row['total'];
+        $params = [];
+        $types = "";
+
+        if (!empty($fromDate)) {
+            $sql .= " AND ps.pooja_date >= ?";
+            $params[] = $fromDate;
+            $types .= "s";
+        }
+
+        if (!empty($date)) {
+            $sql .= " AND ps.pooja_date = ?";
+            $params[] = $date;
+            $types .= "s";
+        }
+
+        if (!empty($poojaType)) {
+            $sql .= " AND (ps.pooja_name LIKE ? OR ps.description LIKE ?)";
+            $searchTerm = "%" . $poojaType . "%";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $types .= "ss";
+        }
+
+        $sql .= " ORDER BY ps.pooja_date ASC, ps.time_slot ASC";
+        
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+        
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $stmt->close();
+        return $result;
     }
 
     /**
@@ -318,6 +544,15 @@ class Schedule {
             error_log("Error updating schedule: " . $e->getMessage());
             return false;
         }
+    }
+
+    public function getTotalCountFilteredByRange($startDate, $endDate) {
+        $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM pooja_schedule WHERE pooja_date BETWEEN ? AND ?");
+        $stmt->bind_param("ss", $startDate, $endDate);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row['total'] ?? 0;
     }
 
     /**

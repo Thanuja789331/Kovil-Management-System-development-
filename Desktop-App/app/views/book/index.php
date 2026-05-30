@@ -94,6 +94,7 @@
                         name="special_requests" 
                         id="special_requests"
                         rows="4"
+                        maxlength="1000"
                         placeholder="Any specific requirements or preferences..."
                         class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 placeholder-gray-400 focus:border-secondary-500 focus:bg-white transition-all duration-200 rounded-xl resize-none"
                     ></textarea>

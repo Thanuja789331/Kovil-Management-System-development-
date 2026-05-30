@@ -8,6 +8,7 @@ require_once __DIR__ . "/../models/Donation.php";
 require_once __DIR__ . "/../models/Announcement.php";
 require_once __DIR__ . "/../models/Festival.php";
 require_once __DIR__ . "/../models/SpecialDay.php";
+require_once __DIR__ . "/../models/PoojaRequest.php";
 
 class MainController {
     private $conn;
@@ -26,6 +27,7 @@ class MainController {
         $announcementModel = new Announcement();
         $festivalModel = new Festival();
         $specialDayModel = new SpecialDay();
+        $poojaRequestModel = new PoojaRequest();
 
         // Lightweight scheduler: process due email reminders during normal traffic.
         if (function_exists('sendEmailNotification')) {
@@ -532,27 +534,19 @@ class MainController {
                     $devoteePhone = trim($_POST['phone'] ?? '');
                     $specialRequests = trim($_POST['special_requests'] ?? '');
                     $notificationPreference = trim($_POST['notification_preference'] ?? 'both');
-                    $phoneRequired = in_array($notificationPreference, ['sms', 'both'], true);
-                    
-                    // Validate required fields
-                    if ($scheduleId <= 0) {
-                        $error = "Invalid schedule ID";
-                        error_log("Booking Error: Invalid schedule ID");
-                    } elseif (empty($_SESSION['user']['id'])) {
+
+                    if (empty($_SESSION['user']['id'])) {
                         $error = "User not logged in";
                         error_log("Booking Error: User not logged in");
-                    } elseif ($phoneRequired && empty($devoteePhone)) {
-                        $error = "Phone number is required for SMS notifications";
-                    } elseif ($phoneRequired && !preg_match('/^[0-9]{10}$/', $devoteePhone)) {
-                        $error = "Please enter a valid 10-digit phone number";
                     } else {
-                        // Validate booking data
                         $bookingData = [
                             'schedule_id' => $scheduleId,
+                            'user_id' => (int) $_SESSION['user']['id'],
                             'phone' => $devoteePhone,
-                            'notification_preference' => $notificationPreference
+                            'special_requests' => $specialRequests,
+                            'notification_preference' => $notificationPreference,
                         ];
-                        
+
                         $errors = $bookingModel->validateBooking($bookingData);
                         
                         if (empty($errors)) {
@@ -741,20 +735,20 @@ class MainController {
 
             case 'donation':
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                    // Keep controller thin: gather request data and delegate rules to model methods.
                     $donorName = trim($_POST['name'] ?? '');
                     $amount = floatval($_POST['amount'] ?? 0);
                     $purpose = trim($_POST['purpose'] ?? '');
                     $paymentMethod = trim($_POST['payment_method'] ?? 'card');
 
-                    if (!$donationModel->isValidDonorName($donorName)) {
-                        $message = "Donor name must contain only letters/spaces and at least 2 letters.";
-                        $messageType = "error";
-                    } elseif ($amount <= 0) {
-                        $message = "Please enter a valid donation amount";
-                        $messageType = "error";
-                    } elseif (!$donationModel->isValidPaymentMethod($paymentMethod)) {
-                        $message = "Please select a valid payment method";
+                    $donationErrors = $donationModel->validateDonation([
+                        'donor_name' => $donorName,
+                        'amount' => $amount,
+                        'purpose' => $purpose,
+                        'payment_method' => $paymentMethod,
+                    ]);
+
+                    if (!empty($donationErrors)) {
+                        $message = $donationErrors[0];
                         $messageType = "error";
                     } else {
                         $result = $donationModel->create($donorName, $amount, $purpose, $paymentMethod);
@@ -765,9 +759,9 @@ class MainController {
                             $data = [
                                 'receipt' => $donationModel->buildReceiptData(
                                     $result['donation_reference'] ?? ('DON-' . ($result['id'] ?? '')),
-                                    $donorName,
-                                    $amount,
-                                    $purpose,
+                                    $donationModel->normalizeDonorName($donorName),
+                                    round($amount, 2),
+                                    $donationModel->normalizePurpose($purpose),
                                     $paymentMethod
                                 )
                             ];
@@ -981,11 +975,79 @@ class MainController {
                         $_SESSION['language'] = $lang;
                     }
                 }
-                
+
                 // Redirect back to the referring page or dashboard
                 $referer = $_SERVER['HTTP_REFERER'] ?? '?url=dashboard';
                 header("Location: " . $referer);
                 exit;
+
+            case 'pooja-request':
+                $action = $_GET['action'] ?? '';
+                if ($action === 'store') {
+                    // Handle pooja request submission
+                    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user'])) {
+                        $userId = $_SESSION['user']['id'];
+                        $poojaName = trim($_POST['pooja_name'] ?? '');
+                        $preferredDate = $_POST['preferred_date'] ?? '';
+                        $preferredTimeSlot = $_POST['preferred_time_slot'] ?? '';
+                        $specialRequests = trim($_POST['special_requests'] ?? '');
+
+                        if (empty($poojaName) || empty($preferredDate)) {
+                            $_SESSION['error'] = "Pooja name and preferred date are required";
+                        } else {
+                            $result = $poojaRequestModel->create($userId, $poojaName, $preferredDate, $preferredTimeSlot, $specialRequests);
+                            if ($result['success']) {
+                                $_SESSION['success'] = "Pooja request submitted successfully! We will review and get back to you.";
+                            } else {
+                                $_SESSION['error'] = $result['message'];
+                            }
+                        }
+                    }
+                    header("Location: ?url=schedule");
+                    exit;
+                } elseif ($action === 'my-requests') {
+                    // Show user's pooja requests
+                    if (isset($_SESSION['user'])) {
+                        $data = $poojaRequestModel->getByUserId($_SESSION['user']['id']);
+                    }
+                } elseif ($action === 'manage') {
+                    // Admin view to manage all pooja requests
+                    $this->checkRole('management');
+                    $data = $poojaRequestModel->getAll();
+                    $view = "pooja-requests/manage";
+                    require __DIR__ . '/../views/layouts/header.php';
+                    include __DIR__ . '/../views/' . $view . '.php';
+                    include __DIR__ . '/../views/layouts/footer.php';
+                    return;
+                } elseif ($action === 'update-status') {
+                    // Update pooja request status (admin only)
+                    $this->checkRole('management');
+                    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                        $requestId = intval($_POST['request_id'] ?? 0);
+                        $status = $_POST['status'] ?? '';
+                        $adminRemarks = trim($_POST['admin_remarks'] ?? '');
+
+                        if ($requestId > 0 && in_array($status, ['pending', 'approved', 'rejected', 'scheduled'])) {
+                            $ok = $poojaRequestModel->updateStatus($requestId, $status, $adminRemarks);
+                            $_SESSION[$ok ? 'success' : 'error'] = $ok ? "Request status updated successfully!" : "Failed to update request status";
+                        } else {
+                            $_SESSION['error'] = "Invalid request";
+                        }
+                    }
+                    header("Location: ?url=pooja-request&action=manage");
+                    exit;
+                } elseif ($action === 'delete') {
+                    // Delete pooja request (admin only)
+                    $this->checkRole('management');
+                    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                        $requestId = intval($_POST['request_id'] ?? 0);
+                        $ok = $requestId > 0 ? $poojaRequestModel->delete($requestId) : false;
+                        $_SESSION[$ok ? 'success' : 'error'] = $ok ? "Request deleted successfully!" : "Failed to delete request";
+                    }
+                    header("Location: ?url=pooja-request&action=manage");
+                    exit;
+                }
+                break;
 
             default:
                 // Page not found

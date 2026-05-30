@@ -12,24 +12,82 @@
 
     <!-- Header -->
     <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Reports & Analytics</h1>
-        <p class="text-gray-600">Insights and statistics for temple management</p>
-        <div class="mt-4">
-            <a href="?url=export-donations-pdf" class="inline-block bg-gradient-to-r from-primary-700 to-primary-800 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-2 px-5 rounded-xl shadow-md transition-all duration-200">
-                Download Donations Done PDF
+        <h1 class="text-4xl font-extrabold text-white mb-2 drop-shadow-md">📊 Reports & Analytics</h1>
+        <p class="text-emerald-100 font-medium drop-shadow-sm">Comprehensive performance metrics, revenue growth, and booking insights</p>
+        
+        <?php 
+        $startQuery = !empty($_GET['start_date']) ? '&start_date=' . urlencode($_GET['start_date']) : '';
+        $endQuery = !empty($_GET['end_date']) ? '&end_date=' . urlencode($_GET['end_date']) : '';
+        $exportParams = $startQuery . $endQuery;
+        ?>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+            <a href="?url=export-donations-pdf<?= $exportParams ?>" class="inline-block bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                <span>Download Donations PDF</span>
+            </a>
+            <a href="?url=export-donations-csv<?= $exportParams ?>" class="inline-block bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                <span>Export Donations CSV</span>
             </a>
         </div>
+    </div>
+
+    <!-- Date Filtering Form -->
+    <div class="glass-card p-6 bg-white/90 shadow-xl border border-white/20 rounded-2xl mb-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center space-x-2">
+            <svg class="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+            </svg>
+            <span>Filter Report by Date Range</span>
+        </h3>
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <input type="hidden" name="url" value="report">
+            <div>
+                <label for="start_date" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Start Date</label>
+                <input 
+                    type="date" 
+                    name="start_date" 
+                    id="start_date" 
+                    class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-primary-500 focus:outline-none transition-all duration-200" 
+                    value="<?= htmlspecialchars($_GET['start_date'] ?? '') ?>"
+                >
+            </div>
+            <div>
+                <label for="end_date" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">End Date</label>
+                <input 
+                    type="date" 
+                    name="end_date" 
+                    id="end_date" 
+                    class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-primary-500 focus:outline-none transition-all duration-200" 
+                    value="<?= htmlspecialchars($_GET['end_date'] ?? '') ?>"
+                >
+            </div>
+            <div class="flex space-x-2">
+                <button type="submit" class="flex-1 bg-primary-700 hover:bg-primary-800 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-all duration-200">
+                    Apply Filter
+                </button>
+                <?php if (!empty($_GET['start_date']) || !empty($_GET['end_date'])): ?>
+                    <a href="?url=report" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl transition-all duration-200 text-center flex items-center justify-center border border-gray-200">
+                        Clear
+                    </a>
+                <?php endif; ?>
+            </div>
+        </form>
     </div>
 
     <!-- 3 Colored Stat Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- Total Poojas (Orange) -->
-        <div class="glass-card bg-gradient-to-br from-orange-500 to-orange-600 p-6 card-hover">
+        <div class="glass-card bg-gradient-to-br from-orange-500 to-orange-600 p-6 card-hover shadow-xl border border-white/10 rounded-2xl">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">Total Poojas</p>
-                    <p class="text-4xl font-bold text-white mt-2"><?= $poojas ?? 0 ?></p>
-                    <p class="text-white/70 text-xs mt-1">This month</p>
+                    <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">Pooja Ceremonies</p>
+                    <p class="text-4xl font-extrabold text-white mt-2"><?= $poojas ?? 0 ?></p>
+                    <p class="text-white/70 text-xs mt-1">Total in selected timeframe</p>
                 </div>
                 <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,12 +98,12 @@
         </div>
 
         <!-- Total Donations (Blue) -->
-        <div class="glass-card bg-gradient-to-br from-accent-500 to-accent-600 p-6 card-hover">
+        <div class="glass-card bg-gradient-to-br from-accent-500 to-accent-600 p-6 card-hover shadow-xl border border-white/10 rounded-2xl">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">Total Donations</p>
-                    <p class="text-4xl font-bold text-white mt-2">$<?= number_format($donations ?? 0, 2) ?></p>
-                    <p class="text-white/70 text-xs mt-1">Collected this week</p>
+                    <p class="text-4xl font-extrabold text-white mt-2">$<?= number_format($donations ?? 0, 2) ?></p>
+                    <p class="text-white/70 text-xs mt-1">Total in selected timeframe</p>
                 </div>
                 <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,12 +114,12 @@
         </div>
 
         <!-- Events Held (Yellow) -->
-        <div class="glass-card bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 card-hover">
+        <div class="glass-card bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 card-hover shadow-xl border border-white/10 rounded-2xl">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">Events Held</p>
-                    <p class="text-4xl font-bold text-white mt-2"><?= $bookings ?? 0 ?></p>
-                    <p class="text-white/70 text-xs mt-1">Completed successfully</p>
+                    <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">Pooja Bookings</p>
+                    <p class="text-4xl font-extrabold text-white mt-2"><?= $bookings ?? 0 ?></p>
+                    <p class="text-white/70 text-xs mt-1">Confirmed booking slots</p>
                 </div>
                 <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,7 +133,7 @@
     <!-- Progress Bars Section -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Pooja Bookings Progress -->
-        <div class="glass-card p-6 card-hover">
+        <div class="glass-card p-6 bg-white shadow-xl border border-gray-100 rounded-2xl card-hover">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Pooja Bookings Target</h3>
             <div class="space-y-4">
                 <div>
@@ -101,7 +159,7 @@
         </div>
 
         <!-- Donation Collection Progress -->
-        <div class="glass-card p-6 card-hover">
+        <div class="glass-card p-6 bg-white shadow-xl border border-gray-100 rounded-2xl card-hover">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Donation Collection</h3>
             <div class="space-y-4">
                 <div>
@@ -128,7 +186,7 @@
     </div>
 
     <!-- Popular Poojas List -->
-    <div class="glass-card p-6 card-hover">
+    <div class="glass-card p-6 bg-white shadow-xl border border-gray-100 rounded-2xl card-hover">
         <h3 class="text-xl font-bold text-gray-800 mb-4">Popular Poojas</h3>
         <div class="space-y-3">
             <?php

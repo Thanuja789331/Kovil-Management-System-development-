@@ -12,8 +12,8 @@
 
     <!-- Header -->
     <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Donations</h1>
-        <p class="text-gray-600">Contribute to the divine cause</p>
+        <h1 class="text-4xl font-extrabold text-white mb-2 drop-shadow-md">🙏 <?= trans('donation') ?? 'Donations' ?></h1>
+        <p class="text-emerald-100 font-medium drop-shadow-sm">Contribute to the divine cause and support temple activities</p>
     </div>
 
     <?php $isManagement = isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'management'; ?>
@@ -30,10 +30,12 @@
     }
     ?>
     <!-- Top Blue Summary Card -->
-    <div class="glass-card bg-gradient-to-r from-accent-500 to-accent-600 p-6 card-hover">
+    <div class="glass-card bg-gradient-to-r from-accent-500 to-accent-600 p-6 card-hover shadow-xl border border-white/20">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">Total Donations</p>
+                <p class="text-white/90 text-sm font-semibold uppercase tracking-wide">
+                    <?= !empty($_GET['start_date']) || !empty($_GET['end_date']) ? 'Filtered Donations Total' : 'Total Donations All-Time' ?>
+                </p>
                 <p class="text-4xl font-bold text-white mt-2">$<?= number_format($donations ?? 0, 2) ?></p>
             </div>
             <div class="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
@@ -45,19 +47,75 @@
     </div>
 
     <?php if ($isManagement): ?>
+    <!-- Date Filtering Form for Admins -->
+    <div class="glass-card p-6 bg-white/90 shadow-xl border border-white/20 rounded-2xl">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center space-x-2">
+            <svg class="w-5 h-5 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+            </svg>
+            <span>Filter Report by Date Range</span>
+        </h3>
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <input type="hidden" name="url" value="donation">
+            <div>
+                <label for="start_date" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Start Date</label>
+                <input 
+                    type="date" 
+                    name="start_date" 
+                    id="start_date" 
+                    class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-accent-500 focus:outline-none transition-all duration-200" 
+                    value="<?= htmlspecialchars($_GET['start_date'] ?? '') ?>"
+                >
+            </div>
+            <div>
+                <label for="end_date" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">End Date</label>
+                <input 
+                    type="date" 
+                    name="end_date" 
+                    id="end_date" 
+                    class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-accent-500 focus:outline-none transition-all duration-200" 
+                    value="<?= htmlspecialchars($_GET['end_date'] ?? '') ?>"
+                >
+            </div>
+            <div class="flex space-x-2">
+                <button type="submit" class="flex-1 bg-accent-600 hover:bg-accent-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-all duration-200">
+                    Apply Filter
+                </button>
+                <?php if (!empty($_GET['start_date']) || !empty($_GET['end_date'])): ?>
+                    <a href="?url=donation" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl transition-all duration-200 text-center flex items-center justify-center border border-gray-200">
+                        Clear
+                    </a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+
+    <!-- Management Dashboard stats -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="glass-card p-4"><p class="text-sm text-gray-600">Weekly</p><p class="text-xl font-bold text-gray-800">$<?= number_format($summary['weekly_total'] ?? 0, 2) ?></p></div>
-        <div class="glass-card p-4"><p class="text-sm text-gray-600">Monthly</p><p class="text-xl font-bold text-gray-800">$<?= number_format($summary['monthly_total'] ?? 0, 2) ?></p></div>
-        <div class="glass-card p-4"><p class="text-sm text-gray-600">Yearly</p><p class="text-xl font-bold text-gray-800">$<?= number_format($summary['yearly_total'] ?? 0, 2) ?></p></div>
-        <div class="glass-card p-4"><p class="text-sm text-gray-600">All Time</p><p class="text-xl font-bold text-gray-800">$<?= number_format($summary['all_time_total'] ?? 0, 2) ?></p></div>
+        <div class="glass-card p-5 bg-white shadow-md border border-gray-100 rounded-2xl">
+            <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Weekly</p>
+            <p class="text-2xl font-black text-gray-850">$<?= number_format($summary['weekly_total'] ?? 0, 2) ?></p>
+        </div>
+        <div class="glass-card p-5 bg-white shadow-md border border-gray-100 rounded-2xl">
+            <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Monthly</p>
+            <p class="text-2xl font-black text-gray-850">$<?= number_format($summary['monthly_total'] ?? 0, 2) ?></p>
+        </div>
+        <div class="glass-card p-5 bg-white shadow-md border border-gray-100 rounded-2xl">
+            <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Yearly</p>
+            <p class="text-2xl font-black text-gray-850">$<?= number_format($summary['yearly_total'] ?? 0, 2) ?></p>
+        </div>
+        <div class="glass-card p-5 bg-white shadow-md border border-gray-100 rounded-2xl">
+            <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">All Time</p>
+            <p class="text-2xl font-black text-gray-850">$<?= number_format($summary['all_time_total'] ?? 0, 2) ?></p>
+        </div>
     </div>
     <?php endif; ?>
 
     <!-- Donation Form -->
-    <div class="glass-card p-6 card-hover">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Make a Donation</h2>
+    <div class="glass-card p-6 bg-white/95 shadow-xl border border-white/20 rounded-2xl">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Make a Devotional Contribution</h2>
         <?php if(!empty($message)): ?>
-        <div class="mb-4 p-4 <?= $messageType === 'success' ? 'bg-green-500' : 'bg-red-500' ?> text-white rounded-xl shadow-lg">
+        <div class="mb-4 p-4 <?= $messageType === 'success' ? 'bg-green-500' : 'bg-red-500' ?> text-white rounded-xl shadow-lg font-semibold text-sm">
             <?= htmlspecialchars($message) ?>
         </div>
         <?php endif; ?>
@@ -70,12 +128,13 @@
                     name="name" 
                     id="name"
                     placeholder="Enter your name"
-                    pattern="[A-Za-z ]{2,}"
-                    class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl"
+                    minlength="2"
+                    maxlength="100"
+                    class="input-field w-full px-4 py-3 bg-white border border-gray-300 text-gray-800 focus:border-accent-500 focus:bg-white transition-all duration-200 rounded-xl"
                     value="<?= htmlspecialchars($_SESSION['user']['name'] ?? '') ?>"
                     required
                 >
-                <p class="text-xs text-gray-500 mt-1">Letters and spaces only, minimum 2 letters</p>
+                <p class="text-xs text-gray-500 mt-1">Letters and spaces only, minimum 2 letters (Tamil/English supported)</p>
             </div>
 
             <div>
@@ -86,8 +145,9 @@
                     id="amount"
                     placeholder="Enter amount"
                     min="1"
+                    max="999999.99"
                     step="0.01"
-                    class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl"
+                    class="input-field w-full px-4 py-3 bg-white border border-gray-300 text-gray-800 focus:border-accent-500 focus:bg-white transition-all duration-200 rounded-xl"
                     required
                 >
             </div>
@@ -99,13 +159,16 @@
                     name="purpose" 
                     id="purpose"
                     placeholder="E.g., Temple maintenance, Festival sponsorship"
-                    class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl"
+                    minlength="3"
+                    maxlength="200"
+                    class="input-field w-full px-4 py-3 bg-white border border-gray-300 text-gray-800 focus:border-accent-500 focus:bg-white transition-all duration-200 rounded-xl"
                 >
+                <p class="text-xs text-gray-500 mt-1">Optional. Leave blank for a general donation.</p>
             </div>
 
             <div class="md:col-span-2">
                 <label for="payment_method" class="block text-sm font-semibold text-gray-700 mb-2">Payment Method</label>
-                <select name="payment_method" id="payment_method" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 rounded-xl" required>
+                <select name="payment_method" id="payment_method" class="input-field w-full px-4 py-3 bg-white border border-gray-300 text-gray-800 rounded-xl focus:border-accent-500" required>
                     <option value="card">Card Payment</option>
                     <option value="online_transfer">Online Transfer</option>
                 </select>
@@ -115,7 +178,7 @@
             <div class="md:col-span-2">
                 <button 
                     type="submit" 
-                    class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                    class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99]"
                 >
                     Donate Now
                 </button>
@@ -124,8 +187,11 @@
     </div>
 
     <?php if (!empty($receipt)): ?>
-    <div class="glass-card p-6 border-l-4 border-green-500">
-        <h2 class="text-xl font-bold text-gray-800 mb-3">Donation Receipt</h2>
+    <div class="glass-card p-6 border-l-4 border-green-500 bg-white/95 rounded-2xl shadow-xl">
+        <h2 class="text-xl font-bold text-gray-800 mb-3 flex items-center space-x-2">
+            <span class="text-green-500">✔</span>
+            <span>Donation Receipt Confirmed</span>
+        </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
             <p><strong>Reference:</strong> <?= htmlspecialchars($receipt['reference']) ?></p>
             <p><strong>Name:</strong> <?= htmlspecialchars($receipt['name']) ?></p>
@@ -138,13 +204,32 @@
     <?php endif; ?>
 
     <!-- Recent Donations Table -->
-    <div class="glass-card p-6 card-hover">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold text-gray-800"><?= $isManagement ? 'Recent Donations' : 'Donation Summary' ?></h2>
+    <div class="glass-card p-6 bg-white shadow-xl border border-white/20 rounded-2xl">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+                <h2 class="text-xl font-bold text-gray-800"><?= $isManagement ? 'Recent Completed Donations' : 'Donation Summary' ?></h2>
+                <p class="text-xs text-gray-500 mt-1">Audit log of verified temple funding</p>
+            </div>
             <?php if($isManagement): ?>
-            <a href="?url=export-donations-pdf" class="bg-gradient-to-r from-primary-700 to-primary-800 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-all duration-200">
-                Download Donations Report (PDF)
-            </a>
+            <?php 
+            $startQuery = !empty($_GET['start_date']) ? '&start_date=' . urlencode($_GET['start_date']) : '';
+            $endQuery = !empty($_GET['end_date']) ? '&end_date=' . urlencode($_GET['end_date']) : '';
+            $exportParams = $startQuery . $endQuery;
+            ?>
+            <div class="flex flex-wrap gap-2">
+                <a href="?url=export-donations-csv<?= $exportParams ?>" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-all duration-200 flex items-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    <span>Export CSV</span>
+                </a>
+                <a href="?url=export-donations-pdf<?= $exportParams ?>" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-all duration-200 flex items-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    <span>Export PDF</span>
+                </a>
+            </div>
             <?php endif; ?>
         </div>
         <div class="overflow-x-auto">
@@ -163,28 +248,28 @@
                     $donations = [];
                     if ($donationsResult instanceof mysqli_result) {
                         $donations = $donationsResult->fetch_all(MYSQLI_ASSOC);
-                    } elseif (is_array($data)) {
-                        $donations = $data['donations'] ?? [];
+                    } elseif (is_array($donationsResult)) {
+                        $donations = $donationsResult;
                     }
                     ?>
                     <?php if(!empty($donations)): ?>
                         <?php foreach($donations as $donation): ?>
                         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <?php if($isManagement): ?><td class="py-3 px-4 text-gray-800"><?= htmlspecialchars($donation['donor_name']) ?></td><?php endif; ?>
-                            <td class="py-3 px-4 text-green-600 font-semibold">$<?= number_format($donation['amount'], 2) ?></td>
-                            <td class="py-3 px-4 text-gray-600">
+                            <?php if($isManagement): ?><td class="py-3 px-4 text-gray-800 font-semibold"><?= htmlspecialchars($donation['donor_name']) ?></td><?php endif; ?>
+                            <td class="py-3 px-4 text-green-600 font-bold">$<?= number_format($donation['amount'], 2) ?></td>
+                            <td class="py-3 px-4 text-gray-650 font-medium">
                                 <?php if(isset($donation['created_at']) && !empty($donation['created_at'])): ?>
-                                    <?= date('M d, Y', strtotime($donation['created_at'])) ?>
+                                    <?= date('M d, Y g:i A', strtotime($donation['created_at'])) ?>
                                 <?php else: ?>
                                     <span class="text-gray-400">N/A</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="py-3 px-4 text-gray-600"><?= htmlspecialchars($donation['purpose'] ?? 'General') ?></td>
+                            <td class="py-3 px-4 text-gray-600 font-medium"><?= htmlspecialchars($donation['purpose'] ?? 'General') ?></td>
                         </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="<?= $isManagement ? '4' : '3' ?>" class="py-8 text-center text-gray-500">No donations yet</td>
+                            <td colspan="<?= $isManagement ? '4' : '3' ?>" class="py-8 text-center text-gray-500">No donations found in this date range.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

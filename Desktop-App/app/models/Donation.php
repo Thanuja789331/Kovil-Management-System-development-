@@ -4,10 +4,41 @@ require_once __DIR__ . "/../../config/database.php";
 class Donation {
     private $conn;
     private static $columnsChecked = false;
+    private const MIN_AMOUNT = 1.00;
+    private const MAX_AMOUNT = 999999.99;
+    private const MAX_PURPOSE_LENGTH = 200;
+    private const MAX_DONOR_NAME_LENGTH = 100;
 
     public function __construct() {
         $this->conn = Database::connect();
+        $this->ensureTable();
         $this->ensureColumns();
+    }
+
+    /**
+     * Validate donation input before persistence.
+     */
+    public function validateDonation(array $data) {
+        $errors = [];
+        $donorName = $this->normalizeDonorName($data['donor_name'] ?? $data['name'] ?? '');
+        $amount = isset($data['amount']) ? (float) $data['amount'] : 0;
+        $purpose = trim((string) ($data['purpose'] ?? ''));
+        $paymentMethod = trim((string) ($data['payment_method'] ?? 'card'));
+
+        if (!$this->isValidDonorName($donorName)) {
+            $errors[] = "Donor name must contain only letters/spaces and at least 2 letters.";
+        }
+        if (!$this->isValidAmount($amount)) {
+            $errors[] = "Please enter a valid donation amount between $" . number_format(self::MIN_AMOUNT, 2) . " and $" . number_format(self::MAX_AMOUNT, 2) . ".";
+        }
+        if (!$this->isValidPurpose($purpose)) {
+            $errors[] = "Purpose must be 3–" . self::MAX_PURPOSE_LENGTH . " characters using letters, numbers, spaces, or basic punctuation.";
+        }
+        if (!$this->isValidPaymentMethod($paymentMethod)) {
+            $errors[] = "Please select a valid payment method.";
+        }
+
+        return $errors;
     }
 
     /**
@@ -15,11 +46,19 @@ class Donation {
      */
     public function create($donor_name, $amount, $purpose, $paymentMethod = 'card') {
         try {
-            if (!$this->isValidDonorName($donor_name)) {
-                return ["success" => false, "message" => "Donor name must contain only letters/spaces and at least 2 letters."];
-            }
-            if (!$this->isValidPaymentMethod($paymentMethod)) {
-                return ["success" => false, "message" => "Invalid payment method selected"];
+            $donor_name = $this->normalizeDonorName($donor_name);
+            $purpose = $this->normalizePurpose($purpose);
+            $paymentMethod = trim((string) $paymentMethod);
+            $amount = round((float) $amount, 2);
+
+            $validationErrors = $this->validateDonation([
+                'donor_name' => $donor_name,
+                'amount' => $amount,
+                'purpose' => $purpose,
+                'payment_method' => $paymentMethod,
+            ]);
+            if (!empty($validationErrors)) {
+                return ["success" => false, "message" => $validationErrors[0]];
             }
 
             $donationReference = 'DON' . strtoupper(uniqid());
@@ -72,6 +111,18 @@ class Donation {
     public function getTotalAmount() {
         $result = $this->conn->query("SELECT SUM(amount) as total FROM donations WHERE payment_status = 'completed'");
         $row = $result->fetch_assoc();
+        return $row['total'] ?? 0;
+    }
+
+    /**
+     * Get total donation amount within a date range
+     */
+    public function getTotalAmountInRange($startDate, $endDate) {
+        $stmt = $this->conn->prepare("SELECT SUM(amount) as total FROM donations WHERE payment_status = 'completed' AND DATE(created_at) BETWEEN ? AND ?");
+        $stmt->bind_param("ss", $startDate, $endDate);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
         return $row['total'] ?? 0;
     }
 
@@ -152,15 +203,37 @@ class Donation {
      * - at least 2 alphabetic characters
      */
     public function isValidDonorName($donorName) {
-        $donorName = trim((string) $donorName);
-        if ($donorName === '') {
+        $donorName = $this->normalizeDonorName($donorName);
+        if ($donorName === '' || strlen($donorName) > self::MAX_DONOR_NAME_LENGTH) {
             return false;
         }
-        if (!preg_match('/^[A-Za-z ]+$/', $donorName)) {
+        if (!preg_match('/^[\p{L} ]+$/u', $donorName)) {
             return false;
         }
-        $letterCount = preg_match_all('/[A-Za-z]/', $donorName);
+        $letterCount = preg_match_all('/\p{L}/u', $donorName);
         return $letterCount >= 2;
+    }
+
+    public function isValidAmount($amount) {
+        if (!is_numeric($amount)) {
+            return false;
+        }
+        $amount = round((float) $amount, 2);
+        if ($amount < self::MIN_AMOUNT || $amount > self::MAX_AMOUNT) {
+            return false;
+        }
+        return abs($amount - round($amount, 2)) < 0.001;
+    }
+
+    public function isValidPurpose($purpose) {
+        $purpose = trim((string) $purpose);
+        if ($purpose === '') {
+            return true;
+        }
+        if (strlen($purpose) < 3 || strlen($purpose) > self::MAX_PURPOSE_LENGTH) {
+            return false;
+        }
+        return (bool) preg_match('/^[\p{L}\p{N}\s.,\-\'&()\/]+$/u', $purpose);
     }
 
     /**
@@ -168,6 +241,19 @@ class Donation {
      */
     public function isValidPaymentMethod($paymentMethod) {
         return in_array(trim((string) $paymentMethod), ['card', 'online_transfer'], true);
+    }
+
+    public function normalizeDonorName($donorName) {
+        $donorName = trim((string) $donorName);
+        return preg_replace('/\s+/u', ' ', $donorName);
+    }
+
+    public function normalizePurpose($purpose) {
+        $purpose = trim((string) $purpose);
+        if ($purpose === '') {
+            return 'General';
+        }
+        return preg_replace('/\s+/u', ' ', $purpose);
     }
 
     /**
@@ -184,10 +270,38 @@ class Donation {
         ];
     }
 
+    private function ensureTable() {
+        $exists = $this->conn->query("SHOW TABLES LIKE 'donations'");
+        if ($exists && $exists->num_rows > 0) {
+            return;
+        }
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS donations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                donor_name VARCHAR(100) NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                purpose VARCHAR(200) NOT NULL DEFAULT 'General',
+                payment_method ENUM('card', 'online_transfer') NOT NULL DEFAULT 'card',
+                donation_reference VARCHAR(50) NOT NULL,
+                payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_donation_reference (donation_reference),
+                INDEX idx_created_at (created_at),
+                INDEX idx_payment_status (payment_status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
+
     private function ensureColumns() {
         if (self::$columnsChecked) {
             return;
         }
+
+        if (!$this->tableExists('donations')) {
+            return;
+        }
+
         $columns = [
             'payment_method' => "ALTER TABLE donations ADD COLUMN payment_method ENUM('card','online_transfer') NOT NULL DEFAULT 'card' AFTER purpose",
             'donation_reference' => "ALTER TABLE donations ADD COLUMN donation_reference VARCHAR(50) NULL AFTER payment_method"
@@ -197,10 +311,37 @@ class Donation {
                 $this->conn->query($sql);
             }
         }
+
+        $this->conn->query("
+            UPDATE donations
+            SET donation_reference = CONCAT('DON', UPPER(SUBSTRING(MD5(CONCAT(id, COALESCE(created_at, NOW()))), 1, 12)))
+            WHERE donation_reference IS NULL OR donation_reference = ''
+        ");
+
+        if (!$this->indexExists('donations', 'uq_donation_reference')) {
+            $this->conn->query("ALTER TABLE donations ADD UNIQUE INDEX uq_donation_reference (donation_reference)");
+        }
+
         self::$columnsChecked = true;
     }
 
+    private function indexExists($table, $indexName) {
+        $table = $this->conn->real_escape_string($table);
+        $indexName = $this->conn->real_escape_string($indexName);
+        $result = $this->conn->query("SHOW INDEX FROM {$table} WHERE Key_name = '{$indexName}'");
+        return $result && $result->num_rows > 0;
+    }
+
+    private function tableExists($table) {
+        $table = $this->conn->real_escape_string($table);
+        $result = $this->conn->query("SHOW TABLES LIKE '{$table}'");
+        return $result && $result->num_rows > 0;
+    }
+
     private function columnExists($table, $column) {
+        if (!$this->tableExists($table)) {
+            return false;
+        }
         $table = $this->conn->real_escape_string($table);
         $column = $this->conn->real_escape_string($column);
         $result = $this->conn->query("SHOW COLUMNS FROM {$table} LIKE '{$column}'");

@@ -442,5 +442,29 @@ return [
     'festivals_events_label' => [
         'en' => 'Festivals & Events',
         'ta' => 'திருவிழாக்கள் மற்றும் நிகழ்வுகள்'
+    ],
+    'my_custom_requests' => [
+        'en' => 'My Pooja Requests',
+        'ta' => 'எனது பூஜை கோரிக்கைகள்'
+    ],
+    'pooja_requests' => [
+        'en' => 'Pooja Requests',
+        'ta' => 'பூஜை கோரிக்கைகள்'
+    ],
+    'pending_requests' => [
+        'en' => 'Pending Requests',
+        'ta' => 'நிலுவையில் உள்ள கோரிக்கைகள்'
+    ],
+    'all_tabs' => [
+        'en' => 'All Requests',
+        'ta' => 'அனைத்து கோரிக்கைகள்'
+    ],
+    'approved_scheduled' => [
+        'en' => 'Approved & Scheduled',
+        'ta' => 'அங்கீகரிக்கப்பட்டவை & திட்டமிடப்பட்டவை'
+    ],
+    'declined' => [
+        'en' => 'Declined',
+        'ta' => 'நிராகரிக்கப்பட்டவை'
     ]
 ];

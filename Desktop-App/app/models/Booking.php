@@ -4,10 +4,13 @@ require_once __DIR__ . "/../../config/database.php";
 class Booking {
     private $conn;
     private static $emailColumnsChecked = false;
+    private static $integrityChecked = false;
     private static $bookingPhoneColumn = null;
+    private const MAX_SPECIAL_REQUESTS_LENGTH = 1000;
 
     public function __construct() {
         $this->conn = Database::connect();
+        $this->ensureIntegrityConstraints();
     }
 
     /**
@@ -16,18 +19,21 @@ class Booking {
     public function create($schedule_id, $user_id, $devotee_phone, $special_requests = '', $notificationPreference = 'both') {
         try {
             $this->ensureEmailReminderColumns();
-            // Validate inputs
-            if ($schedule_id <= 0 || $user_id <= 0) {
-                return ["success" => false, "message" => "Invalid schedule or user ID"];
-            }
-            
-            // Validate phone number format
-            $phoneRequired = in_array($notificationPreference, ['sms', 'both'], true);
-            if ($phoneRequired && !preg_match('/^[0-9]{10}$/', $devotee_phone)) {
-                return ["success" => false, "message" => "Invalid phone number. Please enter 10 digits."];
-            }
-            if (!in_array($notificationPreference, ['sms', 'email', 'both'], true)) {
-                return ["success" => false, "message" => "Invalid notification preference selected."];
+            $schedule_id = (int) $schedule_id;
+            $user_id = (int) $user_id;
+            $devotee_phone = $this->normalizePhone($devotee_phone);
+            $special_requests = $this->sanitizeSpecialRequests($special_requests);
+            $notificationPreference = strtolower(trim((string) $notificationPreference));
+
+            $validationErrors = $this->validateBooking([
+                'schedule_id' => $schedule_id,
+                'user_id' => $user_id,
+                'phone' => $devotee_phone,
+                'special_requests' => $special_requests,
+                'notification_preference' => $notificationPreference,
+            ]);
+            if (!empty($validationErrors)) {
+                return ["success" => false, "message" => $validationErrors[0]];
             }
             
             // Generate unique booking reference
@@ -118,7 +124,7 @@ class Booking {
             }
             error_log("Booking exception: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
-            return ["success" => false, "message" => "An error occurred during booking: " . $e->getMessage()];
+            return ["success" => false, "message" => "An error occurred during booking. Please try again."];
         }
     }
 
@@ -138,6 +144,7 @@ class Booking {
                     b.notification_preference,
                     b.reminder_10_day_email_sent,
                     b.reminder_3_day_email_sent,
+                    b.reminder_24_hour_email_sent,
                     p.pooja_name,
                     p.pooja_date,
                     p.time_slot,
@@ -149,7 +156,7 @@ class Booking {
                 WHERE b.status = 'confirmed'
                   AND b.notification_preference IN ('email', 'both')
                   AND p.pooja_date >= CURDATE()
-                  AND DATEDIFF(p.pooja_date, CURDATE()) IN (3, 10)
+                  AND DATEDIFF(p.pooja_date, CURDATE()) IN (1, 3, 10)
             ";
             $result = $this->conn->query($sql);
             if (!$result) {
@@ -165,6 +172,10 @@ class Booking {
                 } elseif ($daysLeft === 3 && (int) $booking['reminder_3_day_email_sent'] === 0) {
                     if ($this->sendReminderEmail($booking, 3)) {
                         $this->markReminderAsSent((int) $booking['id'], 3);
+                    }
+                } elseif ($daysLeft === 1 && (int) $booking['reminder_24_hour_email_sent'] === 0) {
+                    if ($this->sendReminderEmail($booking, 1)) {
+                        $this->markReminderAsSent((int) $booking['id'], 1);
                     }
                 }
             }
@@ -302,29 +313,82 @@ class Booking {
      */
     public function validateBooking($data) {
         $errors = [];
-        $notificationPreference = $data['notification_preference'] ?? 'both';
+        $scheduleId = (int) ($data['schedule_id'] ?? 0);
+        $userId = (int) ($data['user_id'] ?? 0);
+        $phone = $this->normalizePhone($data['phone'] ?? '');
+        $specialRequests = (string) ($data['special_requests'] ?? '');
+        $notificationPreference = strtolower(trim((string) ($data['notification_preference'] ?? 'both')));
         $phoneRequired = in_array($notificationPreference, ['sms', 'both'], true);
-        
-        if (empty($data['schedule_id'])) {
+
+        if ($scheduleId <= 0) {
             $errors[] = "Please select a pooja";
         }
-        
-        if ($phoneRequired && empty($data['phone'])) {
+
+        if ($userId <= 0) {
+            $errors[] = "A valid devotee account is required to complete this booking";
+        }
+
+        if (!in_array($notificationPreference, ['sms', 'email', 'both'], true)) {
+            $errors[] = "Invalid notification preference selected.";
+        }
+
+        if ($phoneRequired && $phone === '') {
             $errors[] = "Phone number is required";
-        } elseif ($phoneRequired && !preg_match('/^[0-9]{10}$|^\+[0-9]{1,3}[0-9]{10}$/', $data['phone'])) {
+        } elseif ($phoneRequired && !$this->isValidPhone($phone)) {
+            $errors[] = "Please enter a valid phone number (10 digits or international format)";
+        } elseif (!$phoneRequired && $phone !== '' && !$this->isValidPhone($phone)) {
             $errors[] = "Please enter a valid phone number (10 digits or international format)";
         }
-        
-        if (!empty($data['schedule_id'])) {
-            $schedule = $this->getScheduleById($data['schedule_id']);
+
+        if ($specialRequests !== '' && !$this->isValidSpecialRequests($specialRequests)) {
+            $errors[] = "Special requests must be " . self::MAX_SPECIAL_REQUESTS_LENGTH . " characters or fewer";
+        }
+
+        if ($scheduleId > 0) {
+            $schedule = $this->getScheduleById($scheduleId);
             if (!$schedule) {
                 $errors[] = "Invalid pooja selected";
             } elseif ($schedule['status'] !== 'available') {
                 $errors[] = "This pooja is no longer available";
             }
         }
-        
+
         return $errors;
+    }
+
+    public function isValidPhone($phone) {
+        $phone = $this->normalizePhone($phone);
+        if ($phone === '') {
+            return true;
+        }
+        return (bool) preg_match('/^[0-9]{10}$|^\+[0-9]{1,3}[0-9]{10}$/', $phone);
+    }
+
+    public function isValidSpecialRequests($specialRequests) {
+        $specialRequests = trim((string) $specialRequests);
+        if ($specialRequests === '') {
+            return true;
+        }
+        if (strlen($specialRequests) > self::MAX_SPECIAL_REQUESTS_LENGTH) {
+            return false;
+        }
+        return (bool) preg_match('/^[\p{L}\p{N}\s.,\-\'!?()\/]+$/u', $specialRequests);
+    }
+
+    public function normalizePhone($phone) {
+        return preg_replace('/\s+/', '', trim((string) $phone));
+    }
+
+    public function sanitizeSpecialRequests($specialRequests) {
+        $specialRequests = trim((string) $specialRequests);
+        if ($specialRequests === '') {
+            return '';
+        }
+        $specialRequests = preg_replace('/\s+/u', ' ', $specialRequests);
+        if (strlen($specialRequests) > self::MAX_SPECIAL_REQUESTS_LENGTH) {
+            $specialRequests = mb_substr($specialRequests, 0, self::MAX_SPECIAL_REQUESTS_LENGTH);
+        }
+        return $specialRequests;
     }
 
     /**
@@ -367,8 +431,8 @@ class Booking {
             SELECT b.*, p.pooja_name, p.pooja_date, p.time_slot
             FROM bookings b
             JOIN pooja_schedule p ON b.schedule_id = p.id
-            WHERE b.user_id = ? AND b.status = 'confirmed'
-            ORDER BY p.pooja_date ASC, p.time_slot ASC
+            WHERE b.user_id = ?
+            ORDER BY p.pooja_date DESC, p.time_slot DESC
         ");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
@@ -378,21 +442,75 @@ class Booking {
     }
 
     /**
+     * Search bookings by devotee name, phone, or booking reference (management only)
+     */
+    public function searchBookings($query) {
+        $q = '%' . $query . '%';
+        $phoneCol = $this->getBookingPhoneColumn();
+        $stmt = $this->conn->prepare("
+            SELECT b.id, b.booking_reference, b.status, b.created_at, b.cancelled_at,
+                   b.{$phoneCol} AS devotee_phone,
+                   p.pooja_name, p.pooja_date, p.time_slot,
+                   u.name AS user_name, u.email AS user_email, u.phone AS user_phone
+            FROM bookings b
+            JOIN pooja_schedule p ON b.schedule_id = p.id
+            JOIN users u ON b.user_id = u.id
+            WHERE u.name LIKE ?
+               OR u.phone LIKE ?
+               OR b.{$phoneCol} LIKE ?
+               OR b.booking_reference LIKE ?
+            ORDER BY p.pooja_date DESC, b.created_at DESC
+        ");
+        $stmt->bind_param("ssss", $q, $q, $q, $q);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    /**
      * Cancel a booking
      */
-    public function cancel($id) {
+    public function cancel($id, $user_id = null) {
         try {
-            $stmt = $this->conn->prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?");
-            if (!$stmt) {
-                throw new Exception("Prepare failed: " . $this->conn->error);
-            }
-            
+            $this->conn->begin_transaction();
+
+            // Fetch the booking details to find the schedule_id
+            $query = "SELECT schedule_id, user_id FROM bookings WHERE id = ? FOR UPDATE";
+            $stmt = $this->conn->prepare($query);
             $stmt->bind_param("i", $id);
-            $success = $stmt->execute();
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result->num_rows === 0) {
+                $stmt->close();
+                $this->conn->rollback();
+                return false;
+            }
+            $booking = $result->fetch_assoc();
             $stmt->close();
-            
-            return $success;
+
+            // If user_id is passed, verify ownership
+            if ($user_id !== null && (int)$booking['user_id'] !== (int)$user_id) {
+                $this->conn->rollback();
+                return false;
+            }
+
+            // Update booking status and record cancellation time
+            $updateBooking = $this->conn->prepare("UPDATE bookings SET status = 'cancelled', cancelled_at = NOW() WHERE id = ?");
+            $updateBooking->bind_param("i", $id);
+            $updateBooking->execute();
+            $updateBooking->close();
+
+            // Update pooja schedule status to available
+            $updateSchedule = $this->conn->prepare("UPDATE pooja_schedule SET status = 'available' WHERE id = ?");
+            $updateSchedule->bind_param("i", $booking['schedule_id']);
+            $updateSchedule->execute();
+            $updateSchedule->close();
+
+            $this->conn->commit();
+            return true;
         } catch (Exception $e) {
+            $this->conn->rollback();
             error_log("Cancel booking error: " . $e->getMessage());
             return false;
         }
@@ -404,6 +522,20 @@ class Booking {
     public function getTotalBookings() {
         $result = $this->conn->query("SELECT COUNT(*) as total FROM bookings WHERE status = 'confirmed'");
         $row = $result->fetch_assoc();
+        return $row['total'];
+    }
+
+    public function getTotalBookingsInRange($startDate, $endDate) {
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) as total 
+            FROM bookings b
+            JOIN pooja_schedule p ON b.schedule_id = p.id
+            WHERE b.status = 'confirmed' AND p.pooja_date BETWEEN ? AND ?
+        ");
+        $stmt->bind_param("ss", $startDate, $endDate);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
         return $row['total'];
     }
 
@@ -615,13 +747,22 @@ class Booking {
     }
 
     private function markReminderAsSent($bookingId, $daysLeft) {
-        $column = $daysLeft === 10 ? 'reminder_10_day_email_sent' : 'reminder_3_day_email_sent';
+        $column = $daysLeft === 10 ? 'reminder_10_day_email_sent' : ($daysLeft === 3 ? 'reminder_3_day_email_sent' : 'reminder_24_hour_email_sent');
         $stmt = $this->conn->prepare("UPDATE bookings SET {$column} = 1 WHERE id = ?");
         if ($stmt) {
             $stmt->bind_param("i", $bookingId);
             $stmt->execute();
             $stmt->close();
         }
+    }
+
+    private function ensureIntegrityConstraints() {
+        if (self::$integrityChecked) {
+            return;
+        }
+
+        $this->ensureEmailReminderColumns();
+        self::$integrityChecked = true;
     }
 
     private function ensureEmailReminderColumns() {
@@ -633,7 +774,9 @@ class Booking {
             'notification_preference' => "ALTER TABLE bookings ADD COLUMN notification_preference ENUM('sms','email','both') NOT NULL DEFAULT 'both' AFTER special_requests",
             'confirmation_email_sent' => "ALTER TABLE bookings ADD COLUMN confirmation_email_sent TINYINT(1) DEFAULT 0",
             'reminder_10_day_email_sent' => "ALTER TABLE bookings ADD COLUMN reminder_10_day_email_sent TINYINT(1) DEFAULT 0",
-            'reminder_3_day_email_sent' => "ALTER TABLE bookings ADD COLUMN reminder_3_day_email_sent TINYINT(1) DEFAULT 0"
+            'reminder_3_day_email_sent' => "ALTER TABLE bookings ADD COLUMN reminder_3_day_email_sent TINYINT(1) DEFAULT 0",
+            'reminder_24_hour_email_sent' => "ALTER TABLE bookings ADD COLUMN reminder_24_hour_email_sent TINYINT(1) DEFAULT 0",
+            'cancelled_at' => "ALTER TABLE bookings ADD COLUMN cancelled_at TIMESTAMP NULL DEFAULT NULL AFTER status"
         ];
 
         foreach ($columns as $column => $alterSql) {
