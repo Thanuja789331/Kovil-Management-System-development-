@@ -172,8 +172,20 @@ class BookingController extends Controller {
      * Handle my bookings
      */
     public function myBookings() {
-        $data = $this->bookingModel->getByUser($_SESSION['user']['id']);
-        return ['data' => $data];
+        $userId = (int) $_SESSION['user']['id'];
+        $data   = $this->bookingModel->getByUser($userId);
+
+        require_once __DIR__ . '/../models/PoojaRequest.php';
+        $poojaRequestModel = new PoojaRequest();
+        $reqResult   = $poojaRequestModel->getByUserId($userId);
+        $poojaRequests = [];
+        if ($reqResult) {
+            while ($row = $reqResult->fetch_assoc()) {
+                $poojaRequests[] = $row;
+            }
+        }
+
+        return ['data' => $data, 'poojaRequests' => $poojaRequests];
     }
 
     /**

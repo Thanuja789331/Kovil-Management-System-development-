@@ -2,25 +2,33 @@
 <?php
 $today = date('Y-m-d');
 $upcomingBookings = [];
-$pastBookings = [];
+$pastBookings     = [];
 
 if ($data) {
-    if ($data instanceof mysqli_result) {
-        $data->data_seek(0);
-        while ($row = $data->fetch_assoc()) {
-            if ($row['status'] === 'confirmed' && $row['pooja_date'] >= $today) {
-                $upcomingBookings[] = $row;
-            } else {
-                $pastBookings[] = $row;
-            }
+    $rows = ($data instanceof mysqli_result) ? $data->fetch_all(MYSQLI_ASSOC) : (is_array($data) ? $data : []);
+    foreach ($rows as $row) {
+        if ($row['status'] === 'confirmed' && $row['pooja_date'] >= $today) {
+            $upcomingBookings[] = $row;
+        } else {
+            $pastBookings[] = $row;
         }
-    } elseif (is_array($data)) {
-        foreach ($data as $row) {
-            if ($row['status'] === 'confirmed' && $row['pooja_date'] >= $today) {
-                $upcomingBookings[] = $row;
-            } else {
-                $pastBookings[] = $row;
-            }
+    }
+}
+
+// Split pooja requests into upcoming (pending/approved/scheduled + future date)
+// and history (rejected, or past-date non-rejected)
+$upcomingRequests = [];
+$pastRequests     = [];
+if (!empty($poojaRequests)) {
+    foreach ($poojaRequests as $req) {
+        $reqStatus = $req['status'] ?? 'pending';
+        $reqDate   = $req['preferred_date'] ?? '';
+        if ($reqStatus === 'rejected') {
+            $pastRequests[] = $req;
+        } elseif ($reqDate >= $today) {
+            $upcomingRequests[] = $req;
+        } else {
+            $pastRequests[] = $req;
         }
     }
 }
@@ -55,22 +63,23 @@ if ($data) {
 
         <!-- Modern Tab Controller -->
         <div class="flex justify-center space-x-4 mb-8">
-            <button id="tab-upcoming" onclick="switchTab('upcoming')" 
+            <button id="tab-upcoming" onclick="switchTab('upcoming')"
                     class="px-6 py-3 rounded-xl font-bold text-sm shadow-md transition-all duration-300 transform active:scale-95 flex items-center space-x-2 bg-secondary-500 text-white hover:bg-secondary-600">
                 <span>Upcoming Poojas</span>
-                <span class="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-black"><?= count($upcomingBookings) ?></span>
+                <span class="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-black"><?= count($upcomingBookings) + count($upcomingRequests) ?></span>
             </button>
-            <button id="tab-past" onclick="switchTab('past')" 
+            <button id="tab-past" onclick="switchTab('past')"
                     class="px-6 py-3 rounded-xl font-bold text-sm shadow-md transition-all duration-300 transform active:scale-95 flex items-center space-x-2 bg-white/60 text-gray-700 hover:bg-white">
                 <span>History & Cancelled</span>
-                <span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs font-black"><?= count($pastBookings) ?></span>
+                <span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs font-black"><?= count($pastBookings) + count($pastRequests) ?></span>
             </button>
         </div>
 
         <!-- Tab 1: Upcoming Bookings Grid -->
         <div id="grid-upcoming" class="transition-all duration-300">
-            <?php if(count($upcomingBookings) > 0): ?>
+            <?php if(count($upcomingBookings) + count($upcomingRequests) > 0): ?>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
                 <?php foreach($upcomingBookings as $booking): ?>
                 <div class="glass-card p-6 card-hover bg-gradient-to-br from-white to-secondary-50 shadow-xl border border-white/20 rounded-2xl relative overflow-hidden flex flex-col justify-between">
                     <div>
@@ -85,6 +94,11 @@ if ($data) {
                                 </span>
                             </div>
                             <h3 class="text-xl font-bold text-gray-800 mt-3 line-clamp-1"><?= htmlspecialchars($booking['pooja_name']) ?></h3>
+                            <?php if (!empty($booking['schedule_description']) && strpos($booking['schedule_description'], 'Pooja request #') !== false): ?>
+                            <span class="inline-block mt-2 text-xs font-semibold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                                Custom Request
+                            </span>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Info details -->
@@ -130,6 +144,7 @@ if ($data) {
                         </button>
                         
                         <form action="?url=cancel-booking" method="POST" onsubmit="return confirm('Are you sure you want to cancel this booking? This will free up the slot for other devotees and cannot be undone.');" class="w-full">
+                            <?= csrfField() ?>
                             <input type="hidden" name="id" value="<?= htmlspecialchars($booking['id']) ?>">
                             <button type="submit" class="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-semibold py-2 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,6 +156,97 @@ if ($data) {
                     </div>
                 </div>
                 <?php endforeach; ?>
+
+                <!-- Upcoming Pooja Request Cards -->
+                <?php foreach($upcomingRequests as $req):
+                    $reqStatus = $req['status'] ?? 'pending';
+                    if ($reqStatus === 'pending') {
+                        $reqBadgeCls  = 'bg-amber-100 text-amber-700';
+                        $reqBadgeTxt  = 'Awaiting Approval';
+                        $reqCardGrad  = 'from-white to-amber-50';
+                        $reqBorderCls = 'border-amber-200/40';
+                        $reqIconColor = 'text-amber-600';
+                    } elseif ($reqStatus === 'approved') {
+                        $reqBadgeCls  = 'bg-blue-100 text-blue-700';
+                        $reqBadgeTxt  = 'Approved';
+                        $reqCardGrad  = 'from-white to-blue-50';
+                        $reqBorderCls = 'border-blue-200/40';
+                        $reqIconColor = 'text-blue-600';
+                    } else {
+                        $reqBadgeCls  = 'bg-green-100 text-green-700';
+                        $reqBadgeTxt  = 'Scheduled';
+                        $reqCardGrad  = 'from-white to-green-50';
+                        $reqBorderCls = 'border-green-200/40';
+                        $reqIconColor = 'text-green-600';
+                    }
+                ?>
+                <div class="glass-card p-6 card-hover bg-gradient-to-br <?= $reqCardGrad ?> shadow-xl border <?= $reqBorderCls ?> rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div class="mb-4 pb-4 border-b border-gray-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-orange-600 bg-orange-100 px-3 py-1 rounded-full">
+                                    REQ #<?= intval($req['id']) ?>
+                                </span>
+                                <span class="text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider <?= $reqBadgeCls ?>">
+                                    <?= $reqBadgeTxt ?>
+                                </span>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800 mt-3 line-clamp-1"><?= htmlspecialchars($req['pooja_name']) ?></h3>
+                            <span class="inline-block mt-2 text-xs font-semibold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                                Custom Request
+                            </span>
+                        </div>
+
+                        <div class="space-y-3 mb-4">
+                            <div class="flex items-start space-x-3">
+                                <svg class="w-5 h-5 <?= $reqIconColor ?> mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <div>
+                                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Preferred Date</p>
+                                    <p class="text-gray-800 font-semibold"><?= date("l, F j, Y", strtotime($req['preferred_date'])) ?></p>
+                                </div>
+                            </div>
+                            <?php if (!empty($req['preferred_time_slot'])): ?>
+                            <div class="flex items-start space-x-3">
+                                <svg class="w-5 h-5 <?= $reqIconColor ?> mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Preferred Time</p>
+                                    <p class="text-gray-800 font-semibold"><?= date('g:i A', strtotime($req['preferred_time_slot'])) ?></p>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if (!empty($req['special_requests'])): ?>
+                        <div class="bg-gray-50/80 p-3 rounded-xl mb-3 border border-gray-100">
+                            <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Special Requests</p>
+                            <p class="text-sm text-gray-700 italic">"<?= htmlspecialchars($req['special_requests']) ?>"</p>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($req['admin_remarks'])): ?>
+                        <div class="bg-blue-50 p-3 rounded-xl mb-3 border border-blue-100">
+                            <p class="text-[10px] text-blue-600 font-bold uppercase mb-1">Temple Remarks</p>
+                            <p class="text-sm text-blue-900"><?= htmlspecialchars($req['admin_remarks']) ?></p>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="?url=pooja-request&action=my-requests"
+                           class="w-full bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold py-2.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            <span>View All Requests</span>
+                        </a>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+
             </div>
             <?php else: ?>
             <div class="glass-card p-12 text-center max-w-xl mx-auto shadow-2xl border border-white/20">
@@ -161,7 +267,7 @@ if ($data) {
 
         <!-- Tab 2: Past & Cancelled Grid (Hidden by Default) -->
         <div id="grid-past" class="hidden transition-all duration-300">
-            <?php if(count($pastBookings) > 0): ?>
+            <?php if(count($pastBookings) + count($pastRequests) > 0): ?>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <?php foreach($pastBookings as $booking): ?>
                 <?php 
@@ -181,6 +287,11 @@ if ($data) {
                                 </span>
                             </div>
                             <h3 class="text-xl font-bold text-gray-700 mt-3 line-clamp-1"><?= htmlspecialchars($booking['pooja_name']) ?></h3>
+                            <?php if (!empty($booking['schedule_description']) && strpos($booking['schedule_description'], 'Pooja request #') !== false): ?>
+                            <span class="inline-block mt-2 text-xs font-semibold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                                Custom Request
+                            </span>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Info details -->
@@ -230,6 +341,53 @@ if ($data) {
                     </button>
                 </div>
                 <?php endforeach; ?>
+
+                <!-- Past / Rejected Pooja Request Cards -->
+                <?php foreach($pastRequests as $req):
+                    $reqStatus = $req['status'] ?? 'pending';
+                    $isRejected = $reqStatus === 'rejected';
+                    $pastReqBadgeCls = $isRejected ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700';
+                    $pastReqBadgeTxt = $isRejected ? 'Rejected' : ucfirst($reqStatus);
+                ?>
+                <div class="glass-card p-6 bg-white/75 shadow-lg border border-gray-200/50 rounded-2xl flex flex-col justify-between opacity-85">
+                    <div>
+                        <div class="mb-4 pb-4 border-b border-gray-200/60">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                                    REQ #<?= intval($req['id']) ?>
+                                </span>
+                                <span class="text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider <?= $pastReqBadgeCls ?>">
+                                    <?= $pastReqBadgeTxt ?>
+                                </span>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-700 mt-3 line-clamp-1"><?= htmlspecialchars($req['pooja_name']) ?></h3>
+                            <span class="inline-block mt-2 text-xs font-semibold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                                Custom Request
+                            </span>
+                        </div>
+
+                        <div class="space-y-3 mb-4">
+                            <div class="flex items-start space-x-3">
+                                <svg class="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <div>
+                                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Preferred Date</p>
+                                    <p class="text-gray-700 font-semibold"><?= date("l, F j, Y", strtotime($req['preferred_date'])) ?></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <?php if (!empty($req['admin_remarks'])): ?>
+                        <div class="<?= $isRejected ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100' ?> p-3 rounded-xl border">
+                            <p class="text-[10px] font-bold uppercase mb-1 <?= $isRejected ? 'text-red-600' : 'text-blue-600' ?>">Temple Remarks</p>
+                            <p class="text-sm <?= $isRejected ? 'text-red-900' : 'text-blue-900' ?>"><?= htmlspecialchars($req['admin_remarks']) ?></p>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+
             </div>
             <?php else: ?>
             <div class="glass-card p-12 text-center max-w-xl mx-auto shadow-2xl border border-white/20">
@@ -252,21 +410,16 @@ if ($data) {
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-6 rounded-2xl border border-emerald-100 shadow-sm text-center">
-                    <p class="text-4xl font-extrabold text-emerald-600 mb-1"><?= count($upcomingBookings) ?></p>
+                    <p class="text-4xl font-extrabold text-emerald-600 mb-1"><?= count($upcomingBookings) + count($upcomingRequests) ?></p>
                     <p class="text-sm text-gray-600 font-bold">Upcoming Poojas</p>
+                </div>
+                <div class="bg-gradient-to-br from-amber-50 to-amber-100/50 p-6 rounded-2xl border border-amber-100 shadow-sm text-center">
+                    <p class="text-4xl font-extrabold text-amber-600 mb-1"><?= count(array_filter($upcomingRequests, fn($r) => $r['status'] === 'pending')) ?></p>
+                    <p class="text-sm text-gray-600 font-bold">Pending Requests</p>
                 </div>
                 <div class="bg-gradient-to-br from-blue-50 to-blue-100/50 p-6 rounded-2xl border border-blue-100 shadow-sm text-center">
                     <p class="text-4xl font-extrabold text-blue-600 mb-1"><?= count($pastBookings) ?></p>
                     <p class="text-sm text-gray-600 font-bold">Completed & Cancelled</p>
-                </div>
-                <div class="bg-gradient-to-br from-purple-50 to-purple-100/50 p-6 rounded-2xl border border-purple-100 shadow-sm text-center">
-                    <p class="text-4xl font-extrabold text-purple-600 mb-1">
-                        <?php 
-                        $total = count($upcomingBookings) + count($pastBookings);
-                        echo $total > 0 ? round((count($upcomingBookings) / $total) * 100) . '%' : '100%';
-                        ?>
-                    </p>
-                    <p class="text-sm text-gray-600 font-bold">Active Booking Rate</p>
                 </div>
             </div>
         </div>

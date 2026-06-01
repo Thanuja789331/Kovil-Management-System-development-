@@ -64,6 +64,7 @@ $currentBookedUserId = intval($schedule['booking_user_id'] ?? 0);
     <!-- Edit Form -->
     <div class="glass-card p-8">
         <form action="?url=schedule&action=update" method="POST" class="space-y-6">
+            <?= csrfField() ?>
             <input type="hidden" name="id" value="<?= htmlspecialchars($schedule['id'] ?? '') ?>">
             
             <!-- Pooja Name -->
@@ -199,6 +200,7 @@ $currentBookedUserId = intval($schedule['booking_user_id'] ?? 0);
                 <p class="text-sm text-gray-600 mb-4">Deleting this pooja will also cancel all associated bookings and priest assignments. This action cannot be undone.</p>
                 
                 <form action="?url=schedule&action=delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this pooja? All bookings will be cancelled!');">
+                    <?= csrfField() ?>
                     <input type="hidden" name="id" value="<?= $schedule['id'] ?>">
                     <button 
                         type="submit" 

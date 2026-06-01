@@ -15,19 +15,19 @@
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Left Side: Logo & Title -->
-                <a href="?url=home" class="flex items-center space-x-3 group transition-transform duration-200 active:scale-95">
+                <a href="?url=<?= isset($_SESSION['user']) ? 'dashboard' : 'home' ?>" class="flex items-center space-x-3 group transition-transform duration-200 active:scale-95">
                     <div class="w-10 h-10 bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform duration-300">
                         <span class="text-2xl">🛕</span>
                     </div>
                     <h1 class="text-xl font-bold text-white tracking-wide group-hover:text-secondary-400 transition-colors duration-200"><?= APP_NAME ?></h1>
                 </a>
-                
+
                 <?php if(isset($_SESSION['user'])): ?>
-                <!-- Right Side: User Info, Language Switcher & Logout -->
-                <div class="flex items-center space-x-4">
+                <!-- Right Side: Desktop Menu (hidden on mobile) -->
+                <div class="hidden md:flex items-center space-x-4">
                     <!-- Admin Menu Dropdown -->
-                    <?php 
-                    if($_SESSION['user']['role'] === 'management'): 
+                    <?php
+                    if($_SESSION['user']['role'] === 'management'):
                         $pendingRequestsCount = 0;
                         try {
                             $dbConn = Database::connect();
@@ -46,7 +46,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
-                            <span class="hidden sm:inline text-white font-semibold text-sm"><?= trans('admin') ?></span>
+                            <span class="text-white font-semibold text-sm"><?= trans('admin') ?></span>
                             <?php if ($pendingRequestsCount > 0): ?>
                                 <span class="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black shadow-md shadow-red-500/30 animate-pulse border border-white/20 ml-1">
                                     <?= $pendingRequestsCount ?>
@@ -56,7 +56,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        
+
                         <!-- Admin Dropdown Menu -->
                         <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
                             <div class="py-2">
@@ -128,7 +128,7 @@
                         </div>
                     </div>
                     <?php endif; ?>
-                    
+
                     <!-- Devotee Menu Dropdown -->
                     <?php if($_SESSION['user']['role'] === 'devotee'): ?>
                     <div class="relative group">
@@ -136,12 +136,12 @@
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
-                            <span class="hidden sm:inline text-white font-semibold text-sm"><?= trans('menu') ?? 'Devotee Menu' ?></span>
+                            <span class="text-white font-semibold text-sm"><?= trans('menu') ?? 'Menu' ?></span>
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        
+
                         <!-- Devotee Dropdown Menu -->
                         <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
                             <div class="py-2">
@@ -189,7 +189,7 @@
                         </div>
                     </div>
                     <?php endif; ?>
-                    
+
                     <!-- Priest Menu Dropdown -->
                     <?php if($_SESSION['user']['role'] === 'priest'): ?>
                     <div class="relative group">
@@ -197,12 +197,12 @@
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                             </svg>
-                            <span class="hidden sm:inline text-white font-semibold text-sm"><?= trans('priest') ?></span>
+                            <span class="text-white font-semibold text-sm"><?= trans('priest') ?></span>
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        
+
                         <!-- Priest Dropdown Menu -->
                         <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
                             <div class="py-2">
@@ -243,19 +243,19 @@
                         </div>
                     </div>
                     <?php endif; ?>
-                    
+
                     <!-- Language Switcher -->
                     <div class="relative group">
                         <button class="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl border border-white/20 hover:bg-white/20 transition-all">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.148"></path>
                             </svg>
-                            <span class="hidden sm:inline text-white font-semibold text-sm"><?= getLanguageName(getCurrentLanguage()) ?></span>
+                            <span class="text-white font-semibold text-sm"><?= getLanguageName(getCurrentLanguage()) ?></span>
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        
+
                         <!-- Dropdown Menu -->
                         <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
                             <div class="py-2">
@@ -282,31 +282,213 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- User Badge -->
-                    <div class="hidden md:flex items-center space-x-3 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/20">
-                        <div class="w-8 h-8 bg-gradient-to-br from-accent-400 to-accent-600 rounded-full flex items-center justify-center">
-                            <span class="text-white font-bold text-sm"><?= strtoupper(substr($_SESSION['user']['name'], 0, 1)) ?></span>
-                        </div>
-                        <div>
-                            <p class="text-white font-semibold text-sm"><?= htmlspecialchars($_SESSION['user']['name']) ?></p>
-                            <p class="text-xs text-white/70 capitalize"><?= htmlspecialchars($_SESSION['user']['role']) ?></p>
+
+                    <!-- User Profile Dropdown -->
+                    <?php
+                    $hdr_avatarFile = !empty($_SESSION['user']['avatar'])
+                        ? (defined('UPLOAD_PATH') ? UPLOAD_PATH : __DIR__ . '/../../../public/uploads/') . 'avatars/' . $_SESSION['user']['avatar']
+                        : null;
+                    $hdr_avatarUrl  = ($hdr_avatarFile && file_exists($hdr_avatarFile))
+                        ? (defined('UPLOAD_URL') ? UPLOAD_URL : APP_URL . '/public/uploads/') . 'avatars/' . htmlspecialchars($_SESSION['user']['avatar']) . '?v=' . filemtime($hdr_avatarFile)
+                        : (!empty($_SESSION['user']['google_avatar']) ? htmlspecialchars($_SESSION['user']['google_avatar']) : null);
+                    ?>
+                    <div class="relative group">
+                        <button class="flex items-center space-x-3 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-200 focus:outline-none">
+                            <?php if ($hdr_avatarUrl): ?>
+                                <img src="<?= $hdr_avatarUrl ?>" alt="avatar" class="w-8 h-8 rounded-full object-cover ring-2 ring-white/30">
+                            <?php else: ?>
+                                <div class="w-8 h-8 bg-gradient-to-br from-accent-400 to-accent-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <span class="text-white font-bold text-sm"><?= strtoupper(substr($_SESSION['user']['name'], 0, 1)) ?></span>
+                                </div>
+                            <?php endif; ?>
+                            <div class="text-left">
+                                <p class="text-white font-semibold text-sm leading-tight"><?= htmlspecialchars($_SESSION['user']['name']) ?></p>
+                                <p class="text-xs text-white/70 capitalize leading-tight"><?= htmlspecialchars($_SESSION['user']['role']) ?></p>
+                            </div>
+                            <svg class="w-4 h-4 text-white/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <!-- Profile dropdown -->
+                        <div class="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
+                            <div class="py-2">
+                                <a href="?url=profile" class="flex items-center space-x-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700 transition-colors">
+                                    <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span class="font-medium text-sm">Profile Settings</span>
+                                </a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <a href="?url=logout" class="flex items-center space-x-3 px-4 py-2.5 hover:bg-red-50 text-red-600 transition-colors">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                    </svg>
+                                    <span class="font-medium text-sm"><?= trans('logout') ?></span>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Logout Button -->
-                    <a href="?url=logout" class="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg">
+                </div>
+
+                <!-- Mobile: Hamburger Button -->
+                <div class="flex md:hidden items-center space-x-2">
+                    <a href="?url=logout" class="flex items-center bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-colors" title="Logout">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                         </svg>
-                        <span class="hidden sm:inline"><?= trans('logout') ?></span>
                     </a>
+                    <button id="mobile-menu-btn" class="flex items-center bg-white/10 border border-white/20 text-white p-2 rounded-lg transition-colors hover:bg-white/20" aria-label="Toggle menu">
+                        <svg id="hamburger-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                        <svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
                 <?php endif; ?>
             </div>
         </div>
+
+        <!-- Mobile Navigation Panel -->
+        <?php if(isset($_SESSION['user'])): ?>
+        <div id="mobile-menu" class="hidden md:hidden border-t border-white/10 bg-primary-900/95">
+            <!-- User Info -->
+            <a href="?url=profile" class="px-4 py-3 border-b border-white/10 flex items-center space-x-3 hover:bg-white/5 transition-colors">
+                <?php if ($hdr_avatarUrl): ?>
+                    <img src="<?= $hdr_avatarUrl ?>" alt="avatar" class="w-9 h-9 rounded-full object-cover ring-2 ring-white/30 flex-shrink-0">
+                <?php else: ?>
+                    <div class="w-9 h-9 bg-gradient-to-br from-accent-400 to-accent-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span class="text-white font-bold"><?= strtoupper(substr($_SESSION['user']['name'], 0, 1)) ?></span>
+                    </div>
+                <?php endif; ?>
+                <div class="flex-1 min-w-0">
+                    <p class="text-white font-semibold text-sm truncate"><?= htmlspecialchars($_SESSION['user']['name']) ?></p>
+                    <p class="text-xs text-white/60 capitalize"><?= htmlspecialchars($_SESSION['user']['role']) ?> &middot; Profile Settings</p>
+                </div>
+                <svg class="w-4 h-4 text-white/40 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
+
+            <div class="px-4 py-3 space-y-1">
+                <!-- Management Links -->
+                <?php if($_SESSION['user']['role'] === 'management'): ?>
+                <?php
+                if (!isset($pendingRequestsCount)) {
+                    $pendingRequestsCount = 0;
+                    try {
+                        $dbConn2 = Database::connect();
+                        $cRes = $dbConn2->query("SELECT COUNT(*) as count FROM pooja_requests WHERE status = 'pending'");
+                        if ($cRes) { $pendingRequestsCount = intval($cRes->fetch_assoc()['count']); }
+                    } catch (Exception $e) {}
+                }
+                ?>
+                <a href="?url=dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-8 0h6"></path></svg>
+                    <span class="font-medium text-sm">Dashboard</span>
+                </a>
+                <a href="?url=manage-users" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="font-medium text-sm">Manage Users</span>
+                </a>
+                <a href="?url=approve-registration" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="font-medium text-sm">Approve Registration</span>
+                </a>
+                <a href="?url=pooja-request&action=manage" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+                        <span class="font-medium text-sm">Pooja Requests</span>
+                    </div>
+                    <?php if ($pendingRequestsCount > 0): ?>
+                        <span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full"><?= $pendingRequestsCount ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="?url=pooja-history" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-accent-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    <span class="font-medium text-sm">Pooja History</span>
+                </a>
+                <a href="?url=booking-search" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-rose-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <span class="font-medium text-sm">Search Bookings</span>
+                </a>
+                <a href="?url=assign" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    <span class="font-medium text-sm">Assign Priest Duties</span>
+                </a>
+
+                <!-- Devotee Links -->
+                <?php elseif($_SESSION['user']['role'] === 'devotee'): ?>
+                <a href="?url=dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-8 0h6"></path></svg>
+                    <span class="font-medium text-sm">Dashboard</span>
+                </a>
+                <a href="?url=schedule" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="font-medium text-sm">Pooja Schedule</span>
+                </a>
+                <a href="?url=my-bookings" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    <span class="font-medium text-sm">My Bookings</span>
+                </a>
+                <a href="?url=pooja-request&action=my-requests" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    <span class="font-medium text-sm">Custom Pooja Requests</span>
+                </a>
+                <a href="?url=donation" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="font-medium text-sm">Donation</span>
+                </a>
+
+                <!-- Priest Links -->
+                <?php elseif($_SESSION['user']['role'] === 'priest'): ?>
+                <a href="?url=dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-8 0h6"></path></svg>
+                    <span class="font-medium text-sm">My Dashboard</span>
+                </a>
+                <a href="?url=priest-schedules" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="font-medium text-sm">All Schedules & Festivals</span>
+                </a>
+                <a href="?url=schedule" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    <span class="font-medium text-sm">Book Pooja</span>
+                </a>
+                <a href="?url=my-bookings" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5 text-accent-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    <span class="font-medium text-sm">My Bookings</span>
+                </a>
+                <?php endif; ?>
+
+                <!-- Language -->
+                <div class="border-t border-white/10 pt-2 mt-1 flex space-x-2">
+                    <a href="?url=language&lang=en" class="flex-1 text-center py-2 rounded-lg text-sm font-medium transition-colors <?= getCurrentLanguage() === 'en' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10' ?>">English</a>
+                    <a href="?url=language&lang=ta" class="flex-1 text-center py-2 rounded-lg text-sm font-medium transition-colors <?= getCurrentLanguage() === 'ta' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10' ?>">தமிழ்</a>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </nav>
-    
+
+    <script>
+    (function () {
+        var btn = document.getElementById('mobile-menu-btn');
+        var menu = document.getElementById('mobile-menu');
+        var hamburger = document.getElementById('hamburger-icon');
+        var closeIcon = document.getElementById('close-icon');
+        if (btn && menu) {
+            btn.addEventListener('click', function () {
+                var isOpen = !menu.classList.contains('hidden');
+                menu.classList.toggle('hidden', isOpen);
+                hamburger.classList.toggle('hidden', !isOpen);
+                closeIcon.classList.toggle('hidden', isOpen);
+            });
+        }
+    })();
+    </script>
+
     <!-- Main Content Area -->
     <main class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <?php if(!empty($message)): ?>
@@ -314,11 +496,10 @@
             <?= htmlspecialchars($message) ?>
         </div>
         <?php endif; ?>
-        
+
         <?php if(!empty($error)): ?>
         <div class="mb-6 p-4 rounded-xl bg-red-600 text-white shadow-lg glass-card">
-            <?php 
-            // Check if error contains HTML tags - if so, render as HTML, otherwise escape
+            <?php
             if (strpos($error, '<') !== false && strpos($error, '>') !== false) {
                 echo $error;
             } else {

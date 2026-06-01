@@ -9,6 +9,7 @@
         <h1 class="text-2xl font-bold text-gray-800 mb-2">Add Festival</h1>
         <p class="text-gray-600 mb-6">Create a new festival entry.</p>
         <form action="?url=festival&action=store" method="POST" class="space-y-5">
+            <?= csrfField() ?>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Festival Name *</label>
                 <input type="text" name="name" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 outline-none" required>

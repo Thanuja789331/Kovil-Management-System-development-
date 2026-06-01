@@ -19,7 +19,7 @@
             </div>
             <div class="flex items-center space-x-2 self-start sm:self-auto">
                 <span class="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg font-semibold">
-                    <?= $data->num_rows ?> Total Requests
+                    <?= ($data instanceof mysqli_result) ? $data->num_rows : 0 ?> Total Requests
                 </span>
             </div>
         </div>
@@ -133,6 +133,7 @@
                     <div class="flex flex-col space-y-2">
                         <?php if($request['status'] === 'pending'): ?>
                         <form action="?url=pooja-request&action=update-status" method="POST" class="space-y-2">
+                            <?= csrfField() ?>
                             <input type="hidden" name="request_id" value="<?= $request['id'] ?>">
                             <select name="status" class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none text-sm">
                                 <option value="approved">Approve</option>
@@ -147,6 +148,7 @@
                         <?php endif; ?>
 
                         <form action="?url=pooja-request&action=delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this request?');">
+                            <?= csrfField() ?>
                             <input type="hidden" name="request_id" value="<?= $request['id'] ?>">
                             <button type="submit" class="w-full bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-semibold transition-all text-sm">
                                 Delete Request

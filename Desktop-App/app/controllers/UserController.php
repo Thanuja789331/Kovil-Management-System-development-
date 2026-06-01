@@ -61,22 +61,26 @@ class UserController extends Controller {
      */
     public function manageUsers() {
         $this->checkRole('management');
-        
-        // Get all users
-        $data = $this->userModel->getAllUsers();
-        
-        // Calculate statistics
-        $stats = [
-            'total' => 0,
-            'devotee' => 0,
-            'priest' => 0,
-            'management' => 0
-        ];
-        
-        if ($data && $data->num_rows > 0) {
-            $tempData = $data;
-            $tempData->data_seek(0);
-            while ($row = $tempData->fetch_assoc()) {
+
+        $message = '';
+        $messageType = '';
+        if (isset($_SESSION['success'])) {
+            $message = $_SESSION['success'];
+            $messageType = 'success';
+            unset($_SESSION['success']);
+        } elseif (isset($_SESSION['error'])) {
+            $message = $_SESSION['error'];
+            $messageType = 'error';
+            unset($_SESSION['error']);
+        }
+
+        $result = $this->userModel->getAllUsers();
+        $allUsers = [];
+        $stats = ['total' => 0, 'devotee' => 0, 'priest' => 0, 'management' => 0];
+
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $allUsers[] = $row;
                 $stats['total']++;
                 if (isset($stats[$row['role']])) {
                     $stats[$row['role']]++;
@@ -84,7 +88,52 @@ class UserController extends Controller {
             }
         }
 
-        return ['data' => $data, 'stats' => $stats];
+        return ['data' => $allUsers, 'stats' => $stats, 'message' => $message, 'messageType' => $messageType];
+    }
+
+    /**
+     * Update a user's details
+     */
+    public function updateUser() {
+        $this->checkRole('management');
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $userId       = intval($_POST['user_id'] ?? 0);
+            $name         = trim($_POST['name'] ?? '');
+            $email        = trim($_POST['email'] ?? '');
+            $phone        = trim($_POST['phone'] ?? '');
+            $role         = $_POST['role'] ?? '';
+            $approvalStatus = $_POST['approval_status'] ?? '';
+
+            $validRoles    = ['devotee', 'priest', 'management'];
+            $validStatuses = ['approved', 'pending', 'rejected'];
+
+            if ($userId <= 0 || empty($name) || empty($email) || !in_array($role, $validRoles) || !in_array($approvalStatus, $validStatuses)) {
+                $_SESSION['error'] = 'Invalid input data. All fields are required.';
+            } else {
+                $result = $this->userModel->updateUser($userId, $name, $email, $phone ?: null, $role, $approvalStatus);
+                $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];
+            }
+        }
+        $this->redirect('?url=manage-users');
+    }
+
+    /**
+     * Delete a user
+     */
+    public function deleteUser() {
+        $this->checkRole('management');
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $userId = intval($_POST['user_id'] ?? 0);
+            if ($userId === intval($_SESSION['user']['id'])) {
+                $_SESSION['error'] = 'You cannot delete your own account';
+            } elseif ($userId > 0) {
+                $ok = $this->userModel->deleteUser($userId);
+                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'User deleted successfully' : 'Failed to delete user';
+            } else {
+                $_SESSION['error'] = 'Invalid user ID';
+            }
+        }
+        $this->redirect('?url=manage-users');
     }
 
     /**

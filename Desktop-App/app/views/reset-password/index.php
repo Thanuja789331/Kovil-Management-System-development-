@@ -5,6 +5,7 @@
             <p class="text-gray-600 mb-6">Set a new password for <?= htmlspecialchars($data['user_email'] ?? 'your account') ?>.</p>
 
             <form method="POST" class="space-y-5">
+                <?= csrfField() ?>
                 <input type="hidden" name="token" value="<?= htmlspecialchars($data['token'] ?? '') ?>">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">New Password</label>

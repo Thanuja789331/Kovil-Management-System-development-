@@ -15,6 +15,7 @@ $yearPoojas = $data['yearPoojas'] ?? [];
         <h1 class="text-2xl font-bold text-gray-800 mb-2">Edit Festival</h1>
         <p class="text-gray-600 mb-6">Update festival details and review this year context.</p>
         <form action="?url=festival&action=update" method="POST" class="space-y-5">
+            <?= csrfField() ?>
             <input type="hidden" name="id" value="<?= htmlspecialchars($festival['id'] ?? '') ?>">
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Festival Name *</label>
@@ -70,6 +71,7 @@ $yearPoojas = $data['yearPoojas'] ?? [];
 
     <div class="glass-card p-6 border-l-4 border-red-500">
         <form action="?url=festival&action=delete" method="POST" onsubmit="return confirm('Delete this festival?');">
+            <?= csrfField() ?>
             <input type="hidden" name="id" value="<?= htmlspecialchars($festival['id'] ?? '') ?>">
             <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition-all">Delete Festival</button>
         </form>

@@ -24,7 +24,7 @@
 
             <?php if($data && $data->num_rows > 0): ?>
             <div class="overflow-x-auto">
-                <table class="w-full text-left">
+                <table class="w-full min-w-[580px] text-left">
                     <thead>
                         <tr class="border-b-2 border-gray-300">
                             <th class="py-3 px-4 text-gray-700 font-semibold">Name</th>
@@ -100,6 +100,7 @@
         </div>
 
         <form method="POST" class="space-y-4">
+            <?= csrfField() ?>
             <input type="hidden" name="user_id" id="approveUserId">
             <input type="hidden" name="action" value="approve">
             
@@ -134,6 +135,7 @@
         </div>
 
         <form method="POST" class="space-y-4">
+            <?= csrfField() ?>
             <input type="hidden" name="user_id" id="rejectUserId">
             <input type="hidden" name="action" value="reject">
             

@@ -46,6 +46,7 @@
             </div>
 
             <form action="?url=pooja-request&action=store" method="POST" class="space-y-4">
+                <?= csrfField() ?>
                 <div>
                     <label for="pooja_name" class="block text-sm font-semibold text-gray-700 mb-2">Pooja Name *</label>
                     <input type="text" id="pooja_name" name="pooja_name" required placeholder="e.g., Satyanarayana Pooja" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all outline-none">
@@ -53,7 +54,10 @@
 
                 <div>
                     <label for="preferred_date" class="block text-sm font-semibold text-gray-700 mb-2">Preferred Date *</label>
-                    <input type="date" id="preferred_date" name="preferred_date" required min="<?= date('Y-m-d') ?>" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all outline-none">
+                    <input type="date" id="preferred_date" name="preferred_date" required
+                        min="<?= date('Y-m-d', strtotime('+3 days')) ?>"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all outline-none">
+                    <p class="text-xs text-gray-500 mt-1">Requests must be submitted at least 3 days in advance.</p>
                 </div>
 
                 <div>

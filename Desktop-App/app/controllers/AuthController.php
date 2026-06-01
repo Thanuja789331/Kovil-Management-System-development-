@@ -11,14 +11,23 @@ class AuthController extends Controller {
         $this->userModel = new User();
     }
 
-    /**
-     * Handle login
-     */
+    // ------------------------------------------------------------------
+    // LOGIN — validates credentials; triggers 2FA for devotee/priest
+    // ------------------------------------------------------------------
     public function login() {
         $error = "";
 
+        // Flash errors from OAuth redirects or expired 2FA sessions
+        foreach (['login_error', '2fa_error'] as $key) {
+            if (!empty($_SESSION[$key])) {
+                $error = $_SESSION[$key];
+                unset($_SESSION[$key]);
+                break;
+            }
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = trim($_POST['email'] ?? '');
+            $email    = trim($_POST['email'] ?? '');
             $password = $_POST['password'] ?? '';
 
             if (empty($email) || empty($password)) {
@@ -26,37 +35,29 @@ class AuthController extends Controller {
             } else {
                 $user = $this->userModel->login($email, $password);
 
-                if ($user) {
-                    // Regenerate session ID to prevent session fixation attacks
-                    if (function_exists('regenerateSessionId')) {
-                        regenerateSessionId();
-                    } else {
-                        session_regenerate_id(true);
-                    }
-                    
-                    // Store user in session
-                    $_SESSION['user'] = $user;
-                    $_SESSION['login_time'] = time();
-                    $_SESSION['user_role'] = $user['role']; // Explicitly store role
-                    
-                    // Debug: Log successful login (remove in production)
+                if ($user && !empty($user['id'])) {
                     error_log("Login successful for {$email}. Role: {$user['role']}");
 
-                    // All roles go to dashboard, which is now role-specific
-                    $this->redirect("?url=dashboard");
+                    $needs2fa = in_array($user['role'], ['devotee', 'priest'], true)
+                                && !empty($user['two_factor_enabled']);
+
+                    if ($needs2fa) {
+                        // 2FA enabled: send OTP and hold login until verified
+                        $this->generateAndSendOtp($user);
+                        $this->redirect("?url=verify-2fa");
+                    } else {
+                        $this->completeLogin($user);
+                    }
                 } else {
-                    // Check if user exists but is pending approval
                     $checkUser = $this->userModel->getByEmail($email);
                     if ($checkUser && $checkUser['approval_status'] === 'pending') {
-                        $error = "<div>⏳ Your account is pending admin approval. Please wait for approval before logging in.</div><div class='mt-2'><small>Admin will review your registration shortly.</small></div>";
+                        $error = "<div>&#9203; Your account is pending admin approval. Please wait for approval before logging in.</div><div class='mt-2'><small>Admin will review your registration shortly.</small></div>";
                     } elseif ($checkUser && $checkUser['approval_status'] === 'rejected') {
-                        $error = "<div>❌ Your account has been rejected. Please contact admin for more information.</div>";
+                        $error = "<div>&#10060; Your account has been rejected. Please contact admin for more information.</div>";
                     } elseif ($checkUser) {
-                        // User exists but wrong password or role mismatch
-                        $error = "<div>❌ Invalid password. Please try again.</div><div class='mt-2'><small>Hint: Default password is 'password'</small></div>";
+                        $error = "<div>&#10060; Invalid password. Please try again.</div>";
                     } else {
-                        // User doesn't exist at all
-                        $error = "<div>❌ No account found with this email address.</div><div class='mt-2'><small>Please register first or check your email.</small></div>";
+                        $error = "<div>&#10060; No account found with this email address.</div>";
                     }
                 }
             }
@@ -65,20 +66,227 @@ class AuthController extends Controller {
         return ['error' => $error];
     }
 
-    /**
-     * Handle registration
-     */
+    // ------------------------------------------------------------------
+    // VERIFY 2FA — checks the OTP the user typed in
+    // ------------------------------------------------------------------
+    public function verify2fa() {
+        // If already logged in, go to dashboard
+        if (!empty($_SESSION['user']['id'])) {
+            $this->redirect("?url=dashboard");
+        }
+
+        // Must have a pending 2FA session
+        if (empty($_SESSION['2fa_pending'])) {
+            $this->redirect("?url=login");
+        }
+
+        $pending =& $_SESSION['2fa_pending'];
+        $error   = "";
+        $info    = "";
+
+        // Collect any info flash (e.g. "Code resent")
+        if (!empty($_SESSION['2fa_info'])) {
+            $info = $_SESSION['2fa_info'];
+            unset($_SESSION['2fa_info']);
+        }
+
+        // Check expiry
+        if (time() > $pending['expires_at']) {
+            unset($_SESSION['2fa_pending']);
+            $_SESSION['2fa_error'] = "Your verification code has expired. Please log in again.";
+            $this->redirect("?url=login");
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $code = preg_replace('/\s+/', '', $_POST['otp_code'] ?? '');
+
+            if (strlen($code) !== 6 || !ctype_digit($code)) {
+                $error = "Please enter the 6-digit code sent to your email.";
+            } elseif ($pending['attempts'] >= 5) {
+                unset($_SESSION['2fa_pending']);
+                $_SESSION['2fa_error'] = "Too many failed attempts. Please log in again.";
+                $this->redirect("?url=login");
+            } elseif (!hash_equals($pending['otp_hash'], hash('sha256', $code))) {
+                $pending['attempts']++;
+                $left  = 5 - $pending['attempts'];
+                $error = "Invalid code. $left attempt(s) remaining.";
+            } else {
+                // OTP correct — complete login
+                $user = $pending['user'];
+                unset($_SESSION['2fa_pending']);
+                $this->completeLogin($user);
+            }
+        }
+
+        $maskedEmail = $this->maskEmail($pending['user']['email'] ?? '');
+        return ['error' => $error, 'info' => $info, 'masked_email' => $maskedEmail];
+    }
+
+    // ------------------------------------------------------------------
+    // RESEND 2FA OTP (GET, no body — session guards it)
+    // ------------------------------------------------------------------
+    public function resend2fa() {
+        if (empty($_SESSION['2fa_pending'])) {
+            $this->redirect("?url=login");
+        }
+        $user = $_SESSION['2fa_pending']['user'];
+        $this->generateAndSendOtp($user);
+        $_SESSION['2fa_info'] = "A new code has been sent to your email.";
+        $this->redirect("?url=verify-2fa");
+    }
+
+    // ------------------------------------------------------------------
+    // GOOGLE OAUTH — step 1: redirect to Google
+    // ------------------------------------------------------------------
+    public function googleRedirect() {
+        $provider = $this->getGoogleProvider();
+        $authUrl  = $provider->getAuthorizationUrl([
+            'scope'  => ['openid', 'profile', 'email'],
+            'prompt' => 'select_account', // always show account picker — prevents auto re-login after logout
+        ]);
+        $_SESSION['oauth2state'] = $provider->getState();
+        header('Location: ' . $authUrl);
+        exit;
+    }
+
+    // ------------------------------------------------------------------
+    // GOOGLE OAUTH — step 2: handle Google's callback
+    // ------------------------------------------------------------------
+    public function googleCallback() {
+        // Validate OAuth state to prevent CSRF
+        if (
+            empty($_GET['state']) ||
+            empty($_SESSION['oauth2state']) ||
+            !hash_equals($_SESSION['oauth2state'], $_GET['state'])
+        ) {
+            unset($_SESSION['oauth2state']);
+            $_SESSION['login_error'] = "Authentication failed: invalid state. Please try again.";
+            $this->redirect("?url=login");
+        }
+        unset($_SESSION['oauth2state']);
+
+        if (!empty($_GET['error'])) {
+            $_SESSION['login_error'] = "Google sign-in was cancelled or denied.";
+            $this->redirect("?url=login");
+        }
+
+        if (empty($_GET['code'])) {
+            $_SESSION['login_error'] = "Authentication failed: missing authorisation code.";
+            $this->redirect("?url=login");
+        }
+
+        try {
+            $provider  = $this->getGoogleProvider();
+            $token     = $provider->getAccessToken('authorization_code', ['code' => $_GET['code']]);
+            $ownerData = $provider->getResourceOwner($token)->toArray();
+
+            // Google returns: sub (user ID), email, name, picture
+            $email    = $ownerData['email'] ?? '';
+            $googleId = $ownerData['sub']   ?? ($ownerData['id'] ?? '');
+            $name     = $ownerData['name']  ?? 'Devotee';
+            $avatar   = $ownerData['picture'] ?? '';
+
+            if (empty($email)) {
+                $_SESSION['login_error'] = "Google sign-in failed: no email address was returned. Ensure your Google account has a verified email.";
+                $this->redirect("?url=login");
+            }
+
+            $user = $this->userModel->findOrCreateGoogleUser([
+                'google_id' => $googleId,
+                'name'      => $name,
+                'email'     => $email,
+                'avatar'    => $avatar,
+            ]);
+
+            if (!$user) {
+                $_SESSION['login_error'] = "Failed to sign in with Google. Please try again.";
+                $this->redirect("?url=login");
+            }
+
+            // New Google user — collect additional details before pending approval
+            if (!empty($user['_is_new'])) {
+                $_SESSION['google_onboarding'] = [
+                    'user_id'       => $user['id'],
+                    'name'          => $user['name'],
+                    'email'         => $user['email'],
+                    'google_avatar' => $user['google_avatar'] ?? '',
+                    'role'          => $user['role'],
+                ];
+                $this->redirect("?url=google-complete-profile");
+            }
+
+            if ($user['approval_status'] !== 'approved') {
+                $_SESSION['login_error'] = "Your account is pending admin approval. Please wait for confirmation.";
+                $this->redirect("?url=login");
+            }
+
+            // Approved Google users bypass 2FA (Google already authenticated them securely)
+            $this->completeLogin($user);
+
+        } catch (\Exception $e) {
+            error_log("Google OAuth error: " . $e->getMessage());
+            $_SESSION['login_error'] = "Google sign-in failed. Please try again or use email/password.";
+            $this->redirect("?url=login");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // GOOGLE ONBOARDING — collect phone + confirm name after first Google login
+    // ------------------------------------------------------------------
+    public function googleCompleteProfile() {
+        // Guard: must have an active onboarding session
+        if (empty($_SESSION['google_onboarding'])) {
+            $this->redirect("?url=login");
+        }
+
+        $ob    = $_SESSION['google_onboarding'];
+        $error = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $name  = trim($_POST['name']  ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+
+            if (empty($name)) {
+                $error = 'Full name is required.';
+            } elseif (empty($phone)) {
+                $error = 'Phone number is required.';
+            } elseif (!$this->userModel->validatePhone($phone)) {
+                $error = 'Please enter a valid 10-digit phone number.';
+            } else {
+                $this->userModel->saveGoogleOnboarding((int) $ob['user_id'], $name, $phone);
+
+                // Notify all management users about the new pending registration
+                $this->userModel->notifyManagementForApproval([
+                    'id'    => $ob['user_id'],
+                    'name'  => $name,
+                    'email' => $ob['email'],
+                    'role'  => $ob['role'],
+                ]);
+
+                unset($_SESSION['google_onboarding']);
+                $_SESSION['login_error'] = "&#10003; Registration complete! Your account is pending admin approval. You'll be able to log in once approved.";
+                session_write_close();
+                $this->redirect("?url=login");
+            }
+        }
+
+        return ['ob' => $ob, 'error' => $error];
+    }
+
+    // ------------------------------------------------------------------
+    // REGISTER
+    // ------------------------------------------------------------------
     public function register() {
-        $message = "";
+        $message     = "";
         $messageType = "";
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $name = trim($_POST['name'] ?? '');
-            $email = trim($_POST['email'] ?? '');
-            $password = $_POST['password'] ?? '';
+            $name            = trim($_POST['name'] ?? '');
+            $email           = trim($_POST['email'] ?? '');
+            $password        = $_POST['password'] ?? '';
             $confirmPassword = $_POST['confirm_password'] ?? '';
-            $role = $_POST['role'] ?? 'devotee';
-            $phone = trim($_POST['phone'] ?? '');
+            $role            = $_POST['role'] ?? 'devotee';
+            $phone           = trim($_POST['phone'] ?? '');
 
             if (empty($name) || empty($email) || empty($password)) {
                 $message = "All fields are required";
@@ -94,55 +302,48 @@ class AuthController extends Controller {
                 $messageType = "error";
             } else {
                 $result = $this->userModel->register($name, $email, $password, $role, $phone);
-                
                 if ($result['success']) {
-                    // Set success message in session and redirect to login
                     $_SESSION['registration_success'] = true;
                     $_SESSION['registration_message'] = $result['message'];
-                    
-                    // Redirect to login page
                     $this->redirect("?url=login");
                 } else {
-                    $message = $result['message'];
+                    $message     = $result['message'];
                     $messageType = "error";
                 }
             }
         }
-        
-        // Check for success message from POST redirect
+
         if (isset($_SESSION['registration_success'])) {
-            $message = $_SESSION['registration_message'] ?? 'Registration successful!';
+            $message     = $_SESSION['registration_message'] ?? 'Registration successful!';
             $messageType = 'success';
-            unset($_SESSION['registration_success']);
-            unset($_SESSION['registration_message']);
+            unset($_SESSION['registration_success'], $_SESSION['registration_message']);
         }
 
         return ['message' => $message, 'messageType' => $messageType];
     }
 
-    /**
-     * Handle logout
-     */
+    // ------------------------------------------------------------------
+    // LOGOUT
+    // ------------------------------------------------------------------
     public function logout() {
-        // Properly destroy session using helper function
         if (function_exists('destroySession')) {
             destroySession();
         } else {
-            // Fallback if helpers not loaded
             $_SESSION = [];
             if (isset($_COOKIE[session_name()])) {
                 setcookie(session_name(), '', time() - 3600, '/');
             }
             session_destroy();
         }
+        header('Clear-Site-Data: "cache"');
         $this->redirect("?url=login");
     }
 
-    /**
-     * Handle forgot password
-     */
+    // ------------------------------------------------------------------
+    // FORGOT PASSWORD
+    // ------------------------------------------------------------------
     public function forgotPassword() {
-        $message = "";
+        $message     = "";
         $messageType = "";
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -151,24 +352,24 @@ class AuthController extends Controller {
                 $reset = $this->userModel->createPasswordResetToken($email, 30);
                 if (!empty($reset['success'])) {
                     $resetUrl = buildAppUrl("?url=reset-password&token=" . urlencode($reset['token']));
-                    $subject = "Password Reset Request";
-                    $body = "Hello {$reset['user']['name']},\n\nA password reset was requested for your account.\n\nReset Link:\n{$resetUrl}\n\nThis link expires in 30 minutes.\nIf you did not request this, you can ignore this email.";
+                    $subject  = "Password Reset Request";
+                    $body     = "Hello {$reset['user']['name']},\n\nA password reset was requested for your account.\n\nReset Link:\n{$resetUrl}\n\nThis link expires in 30 minutes.\nIf you did not request this, you can ignore this email.";
                     sendEmailNotification($reset['user']['email'], $subject, $body, 'password_reset');
                 }
             }
-            $message = "If your email is registered, a password reset link has been sent.";
+            $message     = "If your email is registered, a password reset link has been sent.";
             $messageType = "success";
         }
 
         return ['message' => $message, 'messageType' => $messageType];
     }
 
-    /**
-     * Handle reset password
-     */
+    // ------------------------------------------------------------------
+    // RESET PASSWORD
+    // ------------------------------------------------------------------
     public function resetPassword() {
         $error = "";
-        $data = null;
+        $data  = null;
 
         $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
         if ($token === '') {
@@ -181,7 +382,7 @@ class AuthController extends Controller {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $newPassword = $_POST['password'] ?? '';
+            $newPassword     = $_POST['password'] ?? '';
             $confirmPassword = $_POST['confirm_password'] ?? '';
             if (strlen($newPassword) < 6) {
                 $error = "Password must be at least 6 characters.";
@@ -200,5 +401,60 @@ class AuthController extends Controller {
         $data = ['token' => $token, 'user_email' => $tokenData['email']];
 
         return ['error' => $error, 'data' => $data];
+    }
+
+    // ------------------------------------------------------------------
+    // PRIVATE HELPERS
+    // ------------------------------------------------------------------
+
+    private function completeLogin(array $user): void {
+        // Set all session data first, then regenerate (avoids data loss on Windows)
+        $_SESSION['user']          = $user;
+        $_SESSION['login_time']    = time();
+        $_SESSION['last_activity'] = time();
+        unset($_SESSION['csrf_token']);
+        $_SESSION['user_role'] = $user['role'];
+
+        // Regenerate session ID to prevent session fixation attacks
+        session_regenerate_id(false); // false = keep old session file (safer on Windows)
+
+        error_log("Login completed for {$user['email']}. Role: {$user['role']}");
+
+        // Write session to disk before redirect so the next request can read it
+        session_write_close();
+        $this->redirect("?url=dashboard");
+    }
+
+    private function generateAndSendOtp(array $user): void {
+        $otp = sprintf('%06d', random_int(0, 999999));
+        $_SESSION['2fa_pending'] = [
+            'user'       => $user,
+            'otp_hash'   => hash('sha256', $otp),
+            'expires_at' => time() + 600, // 10 minutes
+            'attempts'   => 0,
+        ];
+        $subject = "Your " . APP_NAME . " Login Code";
+        $body    = "Hello {$user['name']},\n\nYour verification code is:\n\n    {$otp}\n\nThis code expires in 10 minutes.\n\nIf you did not attempt to log in, please ignore this email.";
+        sendEmailNotification($user['email'], $subject, $body, '2fa_otp');
+    }
+
+    private function getGoogleProvider(): \League\OAuth2\Client\Provider\Google {
+        return new \League\OAuth2\Client\Provider\Google([
+            'clientId'     => defined('GOOGLE_CLIENT_ID')     ? GOOGLE_CLIENT_ID     : '',
+            'clientSecret' => defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : '',
+            'redirectUri'  => defined('GOOGLE_REDIRECT_URI')  ? GOOGLE_REDIRECT_URI  : '',
+            'accessType'   => 'online',
+        ]);
+    }
+
+    private function maskEmail(string $email): string {
+        $parts  = explode('@', $email, 2);
+        $local  = $parts[0] ?? '';
+        $domain = $parts[1] ?? '';
+        $len    = strlen($local);
+        if ($len <= 2) {
+            return str_repeat('*', $len) . '@' . $domain;
+        }
+        return substr($local, 0, 1) . str_repeat('*', $len - 2) . substr($local, -1) . '@' . $domain;
     }
 }

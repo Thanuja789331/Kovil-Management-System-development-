@@ -22,8 +22,11 @@ class PoojaRequestController extends Controller {
             $preferredTimeSlot = $_POST['preferred_time_slot'] ?? '';
             $specialRequests = trim($_POST['special_requests'] ?? '');
 
+            $minDate = date('Y-m-d', strtotime('+3 days'));
             if (empty($poojaName) || empty($preferredDate)) {
                 $_SESSION['error'] = "Pooja name and preferred date are required";
+            } elseif ($preferredDate < $minDate) {
+                $_SESSION['error'] = "Preferred date must be at least 3 days from today (earliest: " . date('M j, Y', strtotime($minDate)) . ").";
             } else {
                 $result = $this->poojaRequestModel->create($userId, $poojaName, $preferredDate, $preferredTimeSlot, $specialRequests);
                 if ($result['success']) {
@@ -53,8 +56,7 @@ class PoojaRequestController extends Controller {
     public function manage() {
         $this->checkRole('management');
         $data = $this->poojaRequestModel->getAll();
-        $view = __DIR__ . "/../views/pooja-requests/manage.php";
-        $this->loadView($view, ['data' => $data]);
+        return ['data' => $data];
     }
 
     /**
@@ -89,13 +91,13 @@ class PoojaRequestController extends Controller {
                         
                         $scheduleId = $scheduleModel->create($poojaName, $poojaDate, $timeSlot, $description);
                         if ($scheduleId) {
-                            $scheduleModel->markBooked($scheduleId);
-                            
                             $userId = $request['user_id'];
                             $phone = $request['user_phone'] ?: '';
                             $specialRequests = $request['special_requests'] ?: '';
-                            
-                            $bookingModel->create($scheduleId, $userId, $phone, $specialRequests, 'both');
+                            // Use 'email' preference when no phone so phone validation doesn't block the booking.
+                            // Booking::create() handles marking the schedule as 'booked' — don't pre-mark here.
+                            $notifPref = !empty($phone) ? 'both' : 'email';
+                            $bookingModel->create($scheduleId, $userId, $phone, $specialRequests, $notifPref);
                         }
                     }
                     $_SESSION[$ok ? 'success' : 'error'] = $ok ? "Request status updated successfully!" : "Failed to update request status";

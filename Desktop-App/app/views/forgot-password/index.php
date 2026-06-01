@@ -5,6 +5,7 @@
             <p class="text-gray-600 mb-6">Enter your account email to receive a reset link.</p>
 
             <form method="POST" class="space-y-5">
+                <?= csrfField() ?>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                     <input type="email" name="email" class="input-field w-full px-4 py-3 bg-white/80 border-2 border-gray-200 text-gray-800 focus:border-primary-500 focus:bg-white transition-all duration-200 rounded-xl" required>

@@ -53,6 +53,7 @@
     <!-- Create Form -->
     <div class="glass-card p-8">
         <form action="?url=schedule&action=store" method="POST" class="space-y-6">
+            <?= csrfField() ?>
             <!-- Pooja Name -->
             <div>
                 <label for="pooja_name" class="block text-sm font-semibold text-gray-700 mb-2">

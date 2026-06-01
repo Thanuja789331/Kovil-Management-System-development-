@@ -13,8 +13,7 @@ class User {
      */
     public function login($email, $password) {
         try {
-            // First, fetch user by email only (check approval separately)
-            $stmt = $this->conn->prepare("SELECT id, name, email, password, role, approval_status FROM users WHERE email = ?");
+            $stmt = $this->conn->prepare("SELECT id, name, email, password, role, approval_status, IFNULL(two_factor_enabled,0) as two_factor_enabled, avatar, google_avatar FROM users WHERE email = ?");
             if (!$stmt) {
                 throw new Exception("Prepare failed: " . $this->conn->error);
             }
@@ -227,7 +226,7 @@ class User {
         }
     }
 
-    private function notifyManagementForApproval($user) {
+    public function notifyManagementForApproval($user) {
         try {
             $managementUsers = $this->getAllManagement();
             if (!$managementUsers) {
@@ -408,6 +407,268 @@ class User {
             error_log("Reset password error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Could not reset password'];
         }
+    }
+
+    /**
+     * Update user details
+     */
+    public function updateUser($id, $name, $email, $phone, $role, $approvalStatus) {
+        try {
+            $check = $this->conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $check->bind_param("si", $email, $id);
+            $check->execute();
+            if ($check->get_result()->num_rows > 0) {
+                $check->close();
+                return ['success' => false, 'message' => 'Email is already used by another account'];
+            }
+            $check->close();
+
+            $stmt = $this->conn->prepare("UPDATE users SET name=?, email=?, phone=?, role=?, approval_status=? WHERE id=?");
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $this->conn->error);
+            }
+            $phone = $phone ?: null;
+            $stmt->bind_param("sssssi", $name, $email, $phone, $role, $approvalStatus, $id);
+            $ok = $stmt->execute();
+            $stmt->close();
+            return $ok
+                ? ['success' => true, 'message' => 'User updated successfully']
+                : ['success' => false, 'message' => 'Failed to update user'];
+        } catch (Exception $e) {
+            error_log("Update user error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'An error occurred while updating user'];
+        }
+    }
+
+    /**
+     * Delete a user by ID
+     */
+    public function deleteUser($id) {
+        try {
+            $stmt = $this->conn->prepare("DELETE FROM users WHERE id = ?");
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $this->conn->error);
+            }
+            $stmt->bind_param("i", $id);
+            $ok = $stmt->execute();
+            $stmt->close();
+            return $ok;
+        } catch (Exception $e) {
+            error_log("Delete user error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get full profile data for the settings page.
+     */
+    public function getProfileById(int $id): ?array {
+        $stmt = $this->conn->prepare("
+            SELECT id, name, email, phone, role, approval_status,
+                   google_id, google_avatar, avatar,
+                   IFNULL(two_factor_enabled, 0) AS two_factor_enabled,
+                   created_at,
+                   (password IS NOT NULL AND password != '') AS has_password
+            FROM users WHERE id = ? LIMIT 1
+        ");
+        if (!$stmt) return null;
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $user ?: null;
+    }
+
+    /**
+     * Update a user's own profile (name, email, phone).
+     */
+    public function updateProfile(int $id, string $name, string $email, ?string $phone): array {
+        $check = $this->conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+        $check->bind_param("si", $email, $id);
+        $check->execute();
+        if ($check->get_result()->num_rows > 0) {
+            $check->close();
+            return ['success' => false, 'message' => 'That email is already used by another account.'];
+        }
+        $check->close();
+
+        $stmt = $this->conn->prepare("UPDATE users SET name = ?, email = ?, phone = ?, updated_at = NOW() WHERE id = ?");
+        if (!$stmt) return ['success' => false, 'message' => 'Update failed.'];
+        $stmt->bind_param("sssi", $name, $email, $phone, $id);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok
+            ? ['success' => true,  'message' => 'Profile updated successfully.']
+            : ['success' => false, 'message' => 'Failed to save changes.'];
+    }
+
+    /**
+     * Set a password for a user (used by Google-only accounts creating a password for the first time).
+     */
+    public function setPassword(int $id, string $newPassword): array {
+        $hash = password_hash($newPassword, PASSWORD_DEFAULT);
+        $stmt = $this->conn->prepare("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?");
+        if (!$stmt) return ['success' => false, 'message' => 'Update failed.'];
+        $stmt->bind_param("si", $hash, $id);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok
+            ? ['success' => true,  'message' => 'Password created. You can now log in with your email and password.']
+            : ['success' => false, 'message' => 'Failed to save password. Please try again.'];
+    }
+
+    /**
+     * Change password — verifies the current password first.
+     */
+    public function changePassword(int $id, string $currentPassword, string $newPassword): array {
+        $stmt = $this->conn->prepare("SELECT password FROM users WHERE id = ? LIMIT 1");
+        if (!$stmt) return ['success' => false, 'message' => 'Failed.'];
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (empty($row['password'])) {
+            return ['success' => false, 'message' => 'No existing password found.'];
+        }
+
+        $isLegacy = strpos($row['password'], '$2y$') !== 0;
+        $matches  = $isLegacy
+            ? ($currentPassword === $row['password'])
+            : password_verify($currentPassword, $row['password']);
+
+        if (!$matches) {
+            return ['success' => false, 'message' => 'Current password is incorrect.'];
+        }
+
+        return $this->setPassword($id, $newPassword);
+    }
+
+    /**
+     * Save custom avatar filename for a user.
+     */
+    public function updateAvatar(int $id, ?string $avatarFilename): array {
+        $stmt = $this->conn->prepare("UPDATE users SET avatar = ?, updated_at = NOW() WHERE id = ?");
+        if (!$stmt) return ['success' => false, 'message' => 'Update failed.'];
+        $stmt->bind_param("si", $avatarFilename, $id);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok
+            ? ['success' => true,  'message' => 'Avatar updated.']
+            : ['success' => false, 'message' => 'Failed to update avatar.'];
+    }
+
+    /**
+     * Enable or disable 2FA for a user.
+     */
+    public function toggle2FA(int $id, bool $enabled): array {
+        $val  = $enabled ? 1 : 0;
+        $stmt = $this->conn->prepare("UPDATE users SET two_factor_enabled = ?, updated_at = NOW() WHERE id = ?");
+        if (!$stmt) return ['success' => false];
+        $stmt->bind_param("ii", $val, $id);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return ['success' => $ok];
+    }
+
+    /**
+     * Find an existing user by google_id or email, or create a new auto-approved devotee.
+     * Used during Google OAuth sign-in.
+     */
+    public function findOrCreateGoogleUser(array $googleData): ?array {
+        $googleId = $googleData['google_id'];
+        $email    = $googleData['email'] ?? '';
+        $name     = $googleData['name'] ?? 'Devotee';
+        $avatar   = $googleData['avatar'] ?? '';
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            error_log("findOrCreateGoogleUser: invalid email from Google: $email");
+            return null;
+        }
+
+        // 1. Find by google_id
+        $stmt = $this->conn->prepare(
+            "SELECT id, name, email, role, approval_status, google_avatar, avatar FROM users WHERE google_id = ? LIMIT 1"
+        );
+        $stmt->bind_param("s", $googleId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($user) {
+            // Update avatar if it changed
+            if ($user['google_avatar'] !== $avatar) {
+                $upd = $this->conn->prepare("UPDATE users SET google_avatar = ?, updated_at = NOW() WHERE id = ?");
+                $upd->bind_param("si", $avatar, $user['id']);
+                $upd->execute();
+                $upd->close();
+                $user['google_avatar'] = $avatar;
+            }
+            return $user;
+        }
+
+        // 2. Find by email — link Google account to existing user
+        $stmt2 = $this->conn->prepare(
+            "SELECT id, name, email, role, approval_status, avatar FROM users WHERE email = ? LIMIT 1"
+        );
+        $stmt2->bind_param("s", $email);
+        $stmt2->execute();
+        $existing = $stmt2->get_result()->fetch_assoc();
+        $stmt2->close();
+
+        if ($existing) {
+            $link = $this->conn->prepare(
+                "UPDATE users SET google_id = ?, google_avatar = ?, updated_at = NOW() WHERE id = ?"
+            );
+            $link->bind_param("ssi", $googleId, $avatar, $existing['id']);
+            $link->execute();
+            $link->close();
+            $existing['google_avatar'] = $avatar;
+            return $existing;
+        }
+
+        // 3. Create new devotee — pending approval (admin must approve before login)
+        $role   = 'devotee';
+        $status = 'pending';
+        $ins = $this->conn->prepare(
+            "INSERT INTO users (name, email, google_id, google_avatar, role, approval_status) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        if (!$ins) {
+            error_log("findOrCreateGoogleUser insert prepare failed: " . $this->conn->error);
+            return null;
+        }
+        $ins->bind_param("ssssss", $name, $email, $googleId, $avatar, $role, $status);
+        $ok    = $ins->execute();
+        $newId = $ins->insert_id;
+        $ins->close();
+
+        if (!$ok) {
+            return null;
+        }
+
+        $this->logRegistration($newId, 'registered', null, 'Registered via Google OAuth');
+
+        return [
+            'id'              => $newId,
+            'name'            => $name,
+            'email'           => $email,
+            'role'            => $role,
+            'approval_status' => $status,
+            'google_avatar'   => $avatar,
+            '_is_new'         => true, // triggers onboarding redirect
+        ];
+    }
+
+    /**
+     * Save phone (and optionally name) collected during Google onboarding.
+     */
+    public function saveGoogleOnboarding(int $id, string $name, string $phone): bool {
+        $stmt = $this->conn->prepare("UPDATE users SET name = ?, phone = ?, updated_at = NOW() WHERE id = ?");
+        if (!$stmt) return false;
+        $stmt->bind_param("ssi", $name, $phone, $id);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok;
     }
 
     private function getUserWithPasswordByEmail($email) {

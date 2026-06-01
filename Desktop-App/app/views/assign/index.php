@@ -42,8 +42,8 @@
         </div>
 
         <!-- Priests Table -->
-        <div class="overflow-x-auto">
-            <table class="w-full">
+        <div class="overflow-x-auto -mx-2 sm:mx-0">
+            <table class="w-full min-w-[600px]">
                 <thead>
                     <tr class="border-b-2 border-gray-300 bg-gray-50">
                         <th class="text-left py-3 px-4 font-bold text-gray-800">Priest Name</th>
@@ -54,9 +54,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php 
-                    if($priests && $priests->num_rows > 0):
-                        while($priest = $priests->fetch_assoc()): 
+                    <?php
+                    if(isset($priests) && $priests && $priests->num_rows > 0):
+                        while($priest = $priests->fetch_assoc()):
                             $isAvailable = $priest['assigned_count'] < 3;
                             $isPending = $priest['approval_status'] === 'pending';
                     ?>
@@ -119,26 +119,28 @@
         </h3>
         
         <form method="POST" class="space-y-6">
+            <?= csrfField() ?>
             <div>
                 <label class="block text-gray-800 text-sm font-bold mb-3">Select Priest</label>
                 <select name="priest" class="w-full px-4 py-3 bg-white border-2 border-gray-300 text-gray-900 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all" required>
                     <option value="" class="text-gray-900">-- Choose a Priest --</option>
-                    <?php 
-                    // Reset pointer and show all priests (including pending)
-                    $priests->data_seek(0);
-                    while($p = $priests->fetch_assoc()): 
-                        if($p['assigned_count'] < 3):
-                            $isPending = $p['approval_status'] === 'pending';
+                    <?php
+                    if (isset($priests) && $priests && $priests->num_rows > 0):
+                        $priests->data_seek(0);
+                        while($p = $priests->fetch_assoc()):
+                            if($p['assigned_count'] < 3):
+                                $isPending = $p['approval_status'] === 'pending';
                     ?>
                     <option value="<?= $p['id'] ?>" class="text-gray-900 <?= $isPending ? 'text-yellow-700 font-bold' : '' ?>">
-                        <?= htmlspecialchars($p['name']) ?> 
-                        (<?= htmlspecialchars($p['email']) ?>) - 
+                        <?= htmlspecialchars($p['name']) ?>
+                        (<?= htmlspecialchars($p['email']) ?>) -
                         <?= $p['assigned_count'] ?>/3 duties
                         <?= $isPending ? ' [PENDING APPROVAL]' : '' ?>
                     </option>
-                    <?php 
-                        endif;
-                    endwhile; 
+                    <?php
+                            endif;
+                        endwhile;
+                    endif;
                     ?>
                 </select>
                 <p class="text-gray-600 text-xs mt-2 font-medium">
@@ -187,8 +189,8 @@
             </svg>
             Recent Assignments History
         </h3>
-        <div class="overflow-x-auto">
-            <table class="w-full">
+        <div class="overflow-x-auto -mx-2 sm:mx-0">
+            <table class="w-full min-w-[560px]">
                 <thead>
                     <tr class="border-b-2 border-gray-300 bg-gray-50">
                         <th class="text-left py-3 px-4 font-bold text-gray-800">Priest</th>
@@ -201,8 +203,8 @@
                 </thead>
                 <tbody>
                     <?php
-                    $duties = $dutyModel->getAllDetailed();
-                    while($duty = $duties->fetch_assoc()):
+                    if (isset($duties) && $duties && $duties->num_rows > 0):
+                        while($duty = $duties->fetch_assoc()):
                     ?>
                     <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                         <td class="py-3 px-4 text-gray-900 font-medium"><?= htmlspecialchars($duty['priest_name']) ?></td>
@@ -222,7 +224,14 @@
                             </span>
                         </td>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php
+                        endwhile;
+                    else:
+                    ?>
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-gray-500 font-medium">No assignments found</td>
+                    </tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>

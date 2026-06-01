@@ -428,7 +428,7 @@ class Booking {
      */
     public function getByUser($user_id) {
         $stmt = $this->conn->prepare("
-            SELECT b.*, p.pooja_name, p.pooja_date, p.time_slot
+            SELECT b.*, p.pooja_name, p.pooja_date, p.time_slot, p.description AS schedule_description
             FROM bookings b
             JOIN pooja_schedule p ON b.schedule_id = p.id
             WHERE b.user_id = ?

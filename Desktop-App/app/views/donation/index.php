@@ -121,6 +121,7 @@
         <?php endif; ?>
 
         <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <?= csrfField() ?>
             <div>
                 <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
                 <input 
@@ -233,7 +234,7 @@
             <?php endif; ?>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full min-w-[520px]">
                 <thead>
                     <tr class="border-b-2 border-gray-200">
                         <?php if($isManagement): ?><th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 uppercase">Name</th><?php endif; ?>

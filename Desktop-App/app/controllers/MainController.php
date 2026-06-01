@@ -130,7 +130,7 @@ class MainController {
                                 $error = "<div>❌ Your account has been rejected. Please contact admin for more information.</div>";
                             } elseif ($checkUser) {
                                 // User exists but wrong password or role mismatch
-                                $error = "<div>❌ Invalid password. Please try again.</div><div class='mt-2'><small>Hint: Default password is 'password'</small></div>";
+                                $error = "<div>❌ Invalid password. Please try again.</div>";
                             } else {
                                 // User doesn't exist at all
                                 $error = "<div>❌ No account found with this email address.</div><div class='mt-2'><small>Please register first or check your email.</small></div>";
@@ -731,6 +731,7 @@ class MainController {
                 // Get all pooja schedules for priest assignment (including past dates for reference)
                 // Order by date descending to show most recent first
                 $schedules = $scheduleModel->getAllChronological();
+                $duties = $dutyModel->getAllDetailed();
                 break;
 
             case 'donation':

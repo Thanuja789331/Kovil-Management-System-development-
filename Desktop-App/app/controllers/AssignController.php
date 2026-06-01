@@ -66,12 +66,15 @@ class AssignController extends Controller {
         // Order by date descending to show most recent first
         $schedules = $this->scheduleModel->getAllChronological();
 
+        $duties = $this->dutyModel->getAllDetailed();
+
         return [
             'message' => $message,
             'messageType' => $messageType,
             'priests' => $priests,
             'schedules' => $schedules,
-            'selectedDate' => $selectedDate
+            'selectedDate' => $selectedDate,
+            'duties' => $duties
         ];
     }
 }

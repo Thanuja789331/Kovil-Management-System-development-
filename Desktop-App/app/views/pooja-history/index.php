@@ -248,7 +248,7 @@ $paginationParams = $searchQuery . $statusQuery . $dateQuery;
 
             <?php if($data && $data->num_rows > 0): ?>
             <div class="overflow-x-auto">
-                <table class="w-full text-left" id="poojaTable">
+                <table class="w-full min-w-[640px] text-left" id="poojaTable">
                     <thead>
                         <tr class="border-b-2 border-gray-300">
                             <th class="py-3 px-4 text-gray-700 font-semibold">#</th>
@@ -265,7 +265,7 @@ $paginationParams = $searchQuery . $statusQuery . $dateQuery;
                     </thead>
                     <tbody>
                         <?php 
-                        $counter = ($page - 1) * 20 + 1;
+                        $counter = ($currentPage - 1) * 20 + 1;
                         while($pooja = $data->fetch_assoc()): 
                             $isPast = strtotime($pooja['pooja_date']) < strtotime('today');
                             $isToday = date('Y-m-d') == $pooja['pooja_date'];
@@ -355,13 +355,13 @@ $paginationParams = $searchQuery . $statusQuery . $dateQuery;
         <?php if($totalPages > 1): ?>
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
             <div class="text-sm text-gray-200 font-medium">
-                Showing page <span class="font-bold text-white"><?= $page ?></span> of <span class="font-bold text-white"><?= $totalPages ?></span>
+                Showing page <span class="font-bold text-white"><?= $currentPage ?></span> of <span class="font-bold text-white"><?= $totalPages ?></span>
                 (<?= $totalPoojas ?> total results matching search)
             </div>
             <div class="flex items-center space-x-2">
                 <!-- Previous Button -->
-                <?php if($page > 1): ?>
-                <a href="?url=pooja-history&page=<?= $page - 1 ?><?= $paginationParams ?>" 
+                <?php if($currentPage > 1): ?>
+                <a href="?url=pooja-history&page=<?= $currentPage - 1 ?><?= $paginationParams ?>" 
                    class="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-xl font-bold text-sm text-gray-705 transition-all shadow-sm">
                     ← Previous
                 </a>
@@ -369,11 +369,11 @@ $paginationParams = $searchQuery . $statusQuery . $dateQuery;
 
                 <!-- Page Numbers -->
                 <?php for($i = 1; $i <= $totalPages; $i++): ?>
-                    <?php if($i == $page): ?>
+                    <?php if($i == $currentPage): ?>
                     <span class="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-black text-sm rounded-xl shadow-md">
                         <?= $i ?>
                     </span>
-                    <?php elseif($i == 1 || $i == $totalPages || ($i >= $page - 2 && $i <= $page + 2)): ?>
+                    <?php elseif($i == 1 || $i == $totalPages || ($i >= $currentPage - 2 && $i <= $currentPage + 2)): ?>
                     <a href="?url=pooja-history&page=<?= $i ?><?= $paginationParams ?>" 
                        class="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-xl font-bold text-sm text-gray-705 transition-all shadow-sm">
                         <?= $i ?>
@@ -384,8 +384,8 @@ $paginationParams = $searchQuery . $statusQuery . $dateQuery;
                 <?php endfor; ?>
 
                 <!-- Next Button -->
-                <?php if($page < $totalPages): ?>
-                <a href="?url=pooja-history&page=<?= $page + 1 ?><?= $paginationParams ?>" 
+                <?php if($currentPage < $totalPages): ?>
+                <a href="?url=pooja-history&page=<?= $currentPage + 1 ?><?= $paginationParams ?>" 
                    class="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-300 rounded-xl font-bold text-sm text-gray-705 transition-all shadow-sm">
                     Next →
                 </a>

@@ -58,6 +58,7 @@
             <?php endif; ?>
 
             <form method="POST" id="bookingForm" class="space-y-6">
+                <?= csrfField() ?>
                 <!-- Devotee Name (Read-only from session) -->
                 <div>
                     <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
